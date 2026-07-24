@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VICE CITY // Progress Tracker Dashboard</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Animated fluid background blobs -->
+    <div class="liquid-bg">
+        <div class="blob blob-pink"></div>
+        <div class="blob blob-cyan"></div>
+        <div class="blob blob-purple"></div>
+    </div>
+    
+    <!-- Neon grid divider -->
+    <div class="neon-grid"></div>
+
+    <div class="dashboard-container">
+        <!-- GTA Vice City Header -->
+        <header class="vice-header">
+            <div class="logo-area">
+                <span class="retro-sub">DAILY PROGRESS</span>
+                <h1 class="retro-title">Vice City</h1>
+            </div>
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <div class="status-badge" id="bot-badge">
+                    <span class="pulse-dot"></span>
+                    <span id="bot-status-text">BOT OFFLINE</span>
+                </div>
+                <div class="status-badge" id="db-badge">
+                    <span class="pulse-dot"></span>
+                    <span id="db-status-text">DATABASE OFFLINE</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Dashboard Layout -->
+        <main class="dashboard-grid">
+            
+            <!-- Left Side: Config & Stats -->
+            <section class="panel glass-panel config-panel animate-slide-in">
+                <h2 class="panel-title"><i class="fa-solid fa-server neon-pink-text"></i> SERVER CONFIGURATION</h2>
+                <div class="pair-selector-wrapper">
+                    <label for="pair-select">SELECT SERVER PAIR:</label>
+                    <select id="pair-select" class="vice-select">
+                        <option value="">Loading pairs...</option>
+                    </select>
+                </div>
+                
+                <div id="pair-config-details" class="config-details">
+                    <div class="config-item">
+                        <span class="label">Community Server</span>
+                        <span class="value" id="cfg-comm-server">-</span>
+                    </div>
+                    <div class="config-item">
+                        <span class="label">Progress Channel</span>
+                        <span class="value" id="cfg-comm-channel">-</span>
+                    </div>
+                    <div class="config-item">
+                        <span class="label">Clan Server</span>
+                        <span class="value" id="cfg-clan-server">-</span>
+                    </div>
+                    <div class="config-item">
+                        <span class="label">Reminder Channel</span>
+                        <span class="value" id="cfg-clan-channel">-</span>
+                    </div>
+                </div>
+
+                <!-- Bot general info section -->
+                <div class="config-details" style="margin-bottom: 24px;">
+                    <div class="stat-label">SYSTEM DETAILS</div>
+                    <div class="config-item" style="border-left-color: var(--vp-cyan);">
+                        <span class="label">Bot Uptime</span>
+                        <span class="value" id="bot-uptime">-</span>
+                    </div>
+                    <div class="config-item" style="border-left-color: var(--vp-cyan);">
+                        <span class="label">Total Messages Sent</span>
+                        <span class="value" id="bot-msg-count">-</span>
+                    </div>
+                </div>
+
+                <!-- Liquid progress bars -->
+                <div class="liquid-stats">
+                    <div class="stat-box">
+                        <div class="stat-label">DAILY POSTED</div>
+                        <div class="progress-liquid-container">
+                            <div class="liquid-fill" id="posted-liquid" style="width: 0%"></div>
+                            <span class="progress-text" id="posted-stat-text">0 / 0</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Middle: Trigger Console -->
+            <section class="panel glass-panel trigger-panel animate-slide-in-delay-1">
+                <h2 class="panel-title"><i class="fa-solid fa-circle-play neon-cyan-text"></i> ACTION CONSOLE</h2>
+                <p class="panel-desc">Execute manual triggers immediately. Reminders obey configured server guardrails.</p>
+                
+                <div class="trigger-buttons-grid">
+                    <button class="vice-btn btn-pink" onclick="triggerReminder('first')">
+                        <span class="btn-wave"></span>
+                        <i class="fa-solid fa-bullhorn"></i>
+                        <span class="btn-text">
+                            <strong>9:00 PM</strong>
+                            <small>Clan Channel Alert</small>
+                        </span>
+                    </button>
+                    
+                    <button class="vice-btn btn-cyan" onclick="triggerReminder('second')">
+                        <span class="btn-wave"></span>
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span class="btn-text">
+                            <strong>11:00 PM</strong>
+                            <small>Send Private DMs</small>
+                        </span>
+                    </button>
+                    
+                    <button class="vice-btn btn-purple" onclick="triggerReminder('inactive')">
+                        <span class="btn-wave"></span>
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        <span class="btn-text">
+                            <strong>10:00 AM</strong>
+                            <small>Inactive Member Alert</small>
+                        </span>
+                    </button>
+                </div>
+                
+                <div class="time-capsules">
+                    <div class="capsule">9 PM Alert: <span id="time-first">--:--</span></div>
+                    <div class="capsule">11 PM DMs: <span id="time-second">--:--</span></div>
+                    <div class="capsule">10 AM Inactive: <span id="time-inactive">--:--</span></div>
+                </div>
+            </section>
+
+            <!-- Right Side: Tracked Members -->
+            <section class="panel glass-panel members-panel span-cols animate-slide-in-delay-2">
+                <h2 class="panel-title"><i class="fa-solid fa-users neon-pink-text"></i> TRACKED MEMBERS STATUS</h2>
+                <div class="members-filter-bar">
+                    <button class="filter-btn active" onclick="filterMembers('all')">ALL</button>
+                    <button class="filter-btn" onclick="filterMembers('posted')">SUBMITTED</button>
+                    <button class="filter-btn" onclick="filterMembers('unposted')">MISSING</button>
+                    <button class="filter-btn" onclick="filterMembers('inactive')">INACTIVE (2D)</button>
+                </div>
+                <div class="members-list-grid" id="members-list">
+                    <div class="no-members">Select a server pair to view members.</div>
+                </div>
+            </section>
+
+            <!-- Bottom: Database Logs -->
+            <section class="panel glass-panel database-panel span-cols-full animate-slide-in-delay-3">
+                <h2 class="panel-title"><i class="fa-solid fa-database neon-cyan-text"></i> DATABASE PERSISTENCE & HISTORY</h2>
+                <div class="logs-tabs-header">
+                    <button class="log-tab-btn active" onclick="switchLogTab('updates')">RECENT PROGRESS UPDATES</button>
+                    <button class="log-tab-btn" onclick="switchLogTab('reminders')">REMINDER DISPATCH LOGS</button>
+                </div>
+                <div class="log-table-container">
+                    <table class="vice-table" id="db-logs-table">
+                        <thead>
+                            <tr id="table-headers">
+                                <th>Loading logs...</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <tr>
+                                <td colspan="5" class="center-text">No database records loaded yet.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast">
+        <span id="toast-message">Action executed</span>
+    </div>
+
+    <!-- Background Palm Trees (GTA Silhouette SVG) -->
+    <div class="palm-trees">
+        <svg viewBox="0 0 100 100" class="palm-svg">
+            <path d="M10,100 Q15,60 30,50 Q35,45 40,48 Q32,53 25,50 Q40,55 45,60 Q30,65 20,70 Q45,72 50,80 Z" fill="rgba(46, 8, 84, 0.15)" />
+            <path d="M90,100 Q85,50 70,35 Q65,30 55,35 Q68,40 75,38 Q58,45 52,52 Q72,55 80,62 Z" fill="rgba(46, 8, 84, 0.15)" />
+        </svg>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

@@ -114,6 +114,14 @@ const client = new Client({
     partials: [Partials.Channel]
 });
 
+// Initialize Daily Progress Reminder System plugin
+try {
+    const progressReminder = require('./progress-reminder');
+    progressReminder.init(client, app, botStatus);
+} catch (error) {
+    console.error('❌ Failed to initialize Daily Progress Reminder System plugin:', error);
+}
+
 // Configuration from environment variables
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CHANNEL_ID = process.env.CHANNEL_ID || '1350324320496255102';
@@ -929,15 +937,7 @@ function scheduleMessageDeletion(message) {
 
 // Express API endpoints
 app.get('/', (req, res) => {
-    res.json({
-        service: 'BeeLert Discord Bot',
-        status: botStatus.isOnline ? 'online' : 'offline',
-        uptime: botStatus.connectedAt ? Math.floor((Date.now() - new Date(botStatus.connectedAt)) / 1000) : 0,
-        endpoints: {
-            health: '/health',
-            status: '/status'
-        }
-    });
+    res.redirect('/dashboard');
 });
 
 app.get('/health', (req, res) => {
@@ -1388,17 +1388,8 @@ async function registerCronJobs() {
     if (cronJobsRegistered) return;
     cronJobsRegistered = true;
 
-    // Schedule daily update at 9:00 PM IST (21:00)
-    // Cron format: minute hour * * *
-    // 0 21 * * * means every day at 21:00 (9:00 PM) IST
-    cron.schedule('0 21 * * *', async () => {
-        console.log('Running scheduled daily update...');
-        await sendDailyUpdate();
-        botStatus.lastMessageSent = new Date().toISOString();
-        botStatus.totalMessagesSent++;
-    }, {
-        timezone: 'Asia/Kolkata'
-    });
+    // [DISABLED] Old daily reminder system is disabled.
+    // Replaced by the new Daily Progress Reminder System plugin.
 
     console.log('Daily scheduler started');
     
