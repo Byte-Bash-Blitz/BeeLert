@@ -98,6 +98,8 @@ function isDuplicate(id) {
 
 // Create Express app for health check
 const app = express();
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 const PORT = process.env.PORT || 3000;
 
 // Bot status tracking

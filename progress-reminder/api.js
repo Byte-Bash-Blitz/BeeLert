@@ -126,8 +126,6 @@ function registerRoutes(app, client, botStatus) {
                 .order('created_at', { ascending: false })
                 .limit(15);
 
-            if (logError) throw logError;
-
             // B. Fetch recent progress updates (limit 15)
             const { data: progressUpdates, error: updateError } = await supabase
                 .from('progress_updates')
@@ -135,23 +133,21 @@ function registerRoutes(app, client, botStatus) {
                 .order('created_at', { ascending: false })
                 .limit(15);
 
-            if (updateError) throw updateError;
-
             res.json({
                 success: true,
-                dbConfigured: true,
+                dbConfigured: !logError && !updateError,
                 reminderLogs: reminderLogs || [],
                 progressUpdates: progressUpdates || []
             });
         } catch (error) {
-            console.error('❌ [Progress Reminder API] Error fetching DB logs:', error.message);
-            res.status(500).json({ success: false, error: error.message });
+            console.warn('⚠️ [Progress Reminder API] DB logs fallback:', error.message);
+            res.json({ success: true, dbConfigured: false, reminderLogs: [], progressUpdates: [] });
         }
     });
 
     // 3. POST TRIGGER: Manually execute a reminder check
     router.post('/trigger', async (req, res) => {
-        const { pairIndex, type } = req.body;
+        const { pairIndex, type } = req.body || {};
         
         const idx = parseInt(pairIndex, 10);
         if (isNaN(idx) || idx < 0 || idx >= config.pairs.length) {
