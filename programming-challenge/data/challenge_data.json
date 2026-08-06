@@ -1,0 +1,654 @@
+{
+  "users": {},
+  "activeChallenge": {
+    "id": "q_two_sum",
+    "title": "Two Sum Problem",
+    "difficulty": "Medium",
+    "category": "Algorithms",
+    "description": "Given an array of numbers `nums` and a `target`, return indices of the two numbers such that they add up to `target`.\n\n**Input:** `nums = [2, 7, 11, 15], target = 9`\n**Output:** `[0, 1]`",
+    "hint": "Use a hash map to store complement `target - num` and its index.",
+    "testCases": [
+      {
+        "input": [
+          [
+            2,
+            7,
+            11,
+            15
+          ],
+          9
+        ],
+        "expected": [
+          0,
+          1
+        ]
+      },
+      {
+        "input": [
+          [
+            3,
+            2,
+            4
+          ],
+          6
+        ],
+        "expected": [
+          1,
+          2
+        ]
+      },
+      {
+        "input": [
+          [
+            3,
+            3
+          ],
+          6
+        ],
+        "expected": [
+          0,
+          1
+        ]
+      }
+    ],
+    "postedAt": "2026-08-06T14:22:53.113Z",
+    "solves": [
+      "1438025229774618734"
+    ],
+    "firstSolverId": "1438025229774618734",
+    "fastestSolverId": "1438025229774618734",
+    "fastestTimeMs": 50567
+  },
+  "questionBank": [
+    {
+      "id": "q_sum_two",
+      "title": "Sum of Two Numbers",
+      "difficulty": "Easy",
+      "category": "Variables",
+      "description": "Given two numbers `a` and `b`, output their sum.\n\n**Input Format:** Two integers or array of two integers `[a, b]`\n**Expected Output:** `a + b`",
+      "hint": "Use the `+` operator to add `a` and `b`.",
+      "testCases": [
+        {
+          "input": [
+            3,
+            5
+          ],
+          "expected": 8
+        },
+        {
+          "input": [
+            -2,
+            10
+          ],
+          "expected": 8
+        },
+        {
+          "input": [
+            0,
+            0
+          ],
+          "expected": 0
+        }
+      ]
+    },
+    {
+      "id": "q_even_odd",
+      "title": "Even or Odd",
+      "difficulty": "Easy",
+      "category": "Conditions",
+      "description": "Write a function or program that checks if a number `n` is Even or Odd.\n\n**Input:** Integer `n`\n**Output:** `\"Even\"` or `\"Odd\"`",
+      "hint": "Use the modulo operator `% 2`.",
+      "testCases": [
+        {
+          "input": [
+            4
+          ],
+          "expected": "Even"
+        },
+        {
+          "input": [
+            7
+          ],
+          "expected": "Odd"
+        },
+        {
+          "input": [
+            0
+          ],
+          "expected": "Even"
+        }
+      ]
+    },
+    {
+      "id": "q_reverse_string",
+      "title": "Reverse String",
+      "difficulty": "Easy",
+      "category": "Strings",
+      "description": "Write a function that reverses a given string `str`.\n\n**Input:** String `\"hello\"`\n**Output:** `\"olleh\"`",
+      "hint": "You can iterate backwards or use built-in string reverse methods.",
+      "testCases": [
+        {
+          "input": [
+            "hello"
+          ],
+          "expected": "olleh"
+        },
+        {
+          "input": [
+            "Python"
+          ],
+          "expected": "nohtyP"
+        },
+        {
+          "input": [
+            "a"
+          ],
+          "expected": "a"
+        }
+      ]
+    },
+    {
+      "id": "q_find_max_array",
+      "title": "Find Maximum in Array",
+      "difficulty": "Easy",
+      "category": "Arrays",
+      "description": "Find the largest integer in an array `arr`.\n\n**Input:** Array of integers e.g. `[1, 9, 3, 5]`\n**Output:** Maximum number e.g. `9`",
+      "hint": "Initialize max with the first element and iterate through the array.",
+      "testCases": [
+        {
+          "input": [
+            [
+              1,
+              9,
+              3,
+              5
+            ]
+          ],
+          "expected": 9
+        },
+        {
+          "input": [
+            [
+              -10,
+              -3,
+              -50
+            ]
+          ],
+          "expected": -3
+        },
+        {
+          "input": [
+            [
+              42
+            ]
+          ],
+          "expected": 42
+        }
+      ]
+    },
+    {
+      "id": "q_count_vowels",
+      "title": "Count Vowels",
+      "difficulty": "Easy",
+      "category": "Strings",
+      "description": "Count the number of vowels (a, e, i, o, u case-insensitive) in a string `str`.\n\n**Input:** `\"Programming\"`\n**Output:** `3`",
+      "hint": "Convert string to lowercase and check if each char is in \"aeiou\".",
+      "testCases": [
+        {
+          "input": [
+            "Programming"
+          ],
+          "expected": 3
+        },
+        {
+          "input": [
+            "AEIOU"
+          ],
+          "expected": 5
+        },
+        {
+          "input": [
+            "xyz"
+          ],
+          "expected": 0
+        }
+      ]
+    },
+    {
+      "id": "q_factorial",
+      "title": "Factorial of N",
+      "difficulty": "Easy",
+      "category": "Loops",
+      "description": "Compute `n!` (n factorial) for a given non-negative integer `n`.\n\n**Input:** Integer `n` (e.g. `5`)\n**Output:** `120`",
+      "hint": "Use a loop or recursive multiplication from 1 to n.",
+      "testCases": [
+        {
+          "input": [
+            5
+          ],
+          "expected": 120
+        },
+        {
+          "input": [
+            0
+          ],
+          "expected": 1
+        },
+        {
+          "input": [
+            1
+          ],
+          "expected": 1
+        }
+      ]
+    },
+    {
+      "id": "q_palindrome_check",
+      "title": "Valid Palindrome",
+      "difficulty": "Medium",
+      "category": "Strings",
+      "description": "Check if a string is a palindrome ignoring non-alphanumeric characters and case.\n\n**Input:** `\"A man, a plan, a canal: Panama\"`\n**Output:** `true`",
+      "hint": "Clean the string by removing spaces and punctuation, then check if it equals its reverse.",
+      "testCases": [
+        {
+          "input": [
+            "A man, a plan, a canal: Panama"
+          ],
+          "expected": true
+        },
+        {
+          "input": [
+            "race a car"
+          ],
+          "expected": false
+        },
+        {
+          "input": [
+            "No lemon, no melon"
+          ],
+          "expected": true
+        }
+      ]
+    },
+    {
+      "id": "q_fibonacci_nth",
+      "title": "N-th Fibonacci Number",
+      "difficulty": "Medium",
+      "category": "Recursion",
+      "description": "Calculate the N-th Fibonacci number where `fib(0)=0` and `fib(1)=1`.\n\n**Input:** `n = 7`\n**Output:** `13`",
+      "hint": "Use iteration or memoization for efficiency.",
+      "testCases": [
+        {
+          "input": [
+            0
+          ],
+          "expected": 0
+        },
+        {
+          "input": [
+            1
+          ],
+          "expected": 1
+        },
+        {
+          "input": [
+            7
+          ],
+          "expected": 13
+        },
+        {
+          "input": [
+            10
+          ],
+          "expected": 55
+        }
+      ]
+    },
+    {
+      "id": "q_binary_search",
+      "title": "Binary Search",
+      "difficulty": "Medium",
+      "category": "Searching",
+      "description": "Given a sorted array `arr` and a target `target`, return the 0-based index of target. If not found, return `-1`.\n\n**Input:** `arr = [1, 3, 5, 7, 9], target = 7`\n**Output:** `3`",
+      "hint": "Divide the search space in half using two pointers `left` and `right`.",
+      "testCases": [
+        {
+          "input": [
+            [
+              1,
+              3,
+              5,
+              7,
+              9
+            ],
+            7
+          ],
+          "expected": 3
+        },
+        {
+          "input": [
+            [
+              1,
+              3,
+              5,
+              7,
+              9
+            ],
+            2
+          ],
+          "expected": -1
+        },
+        {
+          "input": [
+            [
+              10,
+              20,
+              30
+            ],
+            10
+          ],
+          "expected": 0
+        }
+      ]
+    },
+    {
+      "id": "q_two_sum",
+      "title": "Two Sum Problem",
+      "difficulty": "Medium",
+      "category": "Algorithms",
+      "description": "Given an array of numbers `nums` and a `target`, return indices of the two numbers such that they add up to `target`.\n\n**Input:** `nums = [2, 7, 11, 15], target = 9`\n**Output:** `[0, 1]`",
+      "hint": "Use a hash map to store complement `target - num` and its index.",
+      "testCases": [
+        {
+          "input": [
+            [
+              2,
+              7,
+              11,
+              15
+            ],
+            9
+          ],
+          "expected": [
+            0,
+            1
+          ]
+        },
+        {
+          "input": [
+            [
+              3,
+              2,
+              4
+            ],
+            6
+          ],
+          "expected": [
+            1,
+            2
+          ]
+        },
+        {
+          "input": [
+            [
+              3,
+              3
+            ],
+            6
+          ],
+          "expected": [
+            0,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "q_oop_bank",
+      "title": "Bank Account Class",
+      "difficulty": "Medium",
+      "category": "OOP",
+      "description": "Implement a BankAccount class/object with `balance`, `deposit(amount)`, and `withdraw(amount)` methods.\n\nDeposit increases balance, withdraw decreases balance (if sufficient funds), return updated balance.",
+      "hint": "Manage `balance` state in the class or object constructor.",
+      "testCases": [
+        {
+          "input": [
+            100,
+            "deposit",
+            50
+          ],
+          "expected": 150
+        },
+        {
+          "input": [
+            100,
+            "withdraw",
+            30
+          ],
+          "expected": 70
+        },
+        {
+          "input": [
+            50,
+            "withdraw",
+            100
+          ],
+          "expected": "Insufficient Funds"
+        }
+      ]
+    },
+    {
+      "id": "q_sql_high_salary",
+      "title": "SQL Highest Salary",
+      "difficulty": "Medium",
+      "category": "SQL",
+      "description": "Write a SQL query to select the name of the employee with the highest salary from table `employees(name, salary)`.\n\n**Expected SQL:** `SELECT name FROM employees ORDER BY salary DESC LIMIT 1;`",
+      "hint": "Use ORDER BY salary DESC and LIMIT 1.",
+      "testCases": [
+        {
+          "input": [
+            "query"
+          ],
+          "expected": "SELECT name FROM employees ORDER BY salary DESC LIMIT 1"
+        }
+      ]
+    },
+    {
+      "id": "q_valid_parentheses",
+      "title": "Valid Parentheses Stacks",
+      "difficulty": "Hard",
+      "category": "Data Structures",
+      "description": "Given a string containing `()`, `{}`, `[]`, determine if the input string is valid.\n\n**Input:** `\"({[]})\"`\n**Output:** `true`",
+      "hint": "Use a Stack data structure to push open brackets and pop on matching closed brackets.",
+      "testCases": [
+        {
+          "input": [
+            "()[]{}"
+          ],
+          "expected": true
+        },
+        {
+          "input": [
+            "({[]})"
+          ],
+          "expected": true
+        },
+        {
+          "input": [
+            "(]"
+          ],
+          "expected": false
+        },
+        {
+          "input": [
+            "([)]"
+          ],
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "q_merge_sort",
+      "title": "Merge Sorted Arrays",
+      "difficulty": "Hard",
+      "category": "Sorting",
+      "description": "Merge two sorted arrays `arr1` and `arr2` into one sorted array in O(n + m) time.\n\n**Input:** `arr1 = [1, 3, 5], arr2 = [2, 4, 6]`\n**Output:** `[1, 2, 3, 4, 5, 6]`",
+      "hint": "Use two pointers to compare elements of both arrays.",
+      "testCases": [
+        {
+          "input": [
+            [
+              1,
+              3,
+              5
+            ],
+            [
+              2,
+              4,
+              6
+            ]
+          ],
+          "expected": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ]
+        },
+        {
+          "input": [
+            [
+              10,
+              20
+            ],
+            [
+              1,
+              2,
+              3
+            ]
+          ],
+          "expected": [
+            1,
+            2,
+            3,
+            10,
+            20
+          ]
+        },
+        {
+          "input": [
+            [],
+            [
+              1,
+              2
+            ]
+          ],
+          "expected": [
+            1,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "q_lru_cache",
+      "title": "LRU Cache Design",
+      "difficulty": "Hard",
+      "category": "Data Structures",
+      "description": "Design a Data Structure that follows Least Recently Used (LRU) eviction policy with fixed capacity.\n\nMethods: `get(key)`, `put(key, value)`. Return `-1` if key missing.",
+      "hint": "Use a Hash Map combined with a Doubly Linked List.",
+      "testCases": [
+        {
+          "input": [
+            "lru_test"
+          ],
+          "expected": "Passed"
+        }
+      ]
+    }
+  ],
+  "submissions": [
+    {
+      "userId": "1438727184209416266",
+      "challengeId": "q_merge_sort",
+      "language": "python",
+      "code": "arr1 = [1,3,5]\n    arr2=[2,4,6]\n\nprint(arr1 +arr2)",
+      "isCorrect": false,
+      "submittedAt": "2026-08-06T13:37:20.026Z"
+    },
+    {
+      "userId": "1438727184209416266",
+      "challengeId": "q_merge_sort",
+      "language": "python",
+      "code": "def merge_sorted_arrays(arr1, arr2):\n    i, j = 0, 0\n    merged = []\n    \n    # Compare elements from both arrays and append the smaller one\n    while i < len(arr1) and j < len(arr2):\n        if arr1[i] <= arr2[j]:\n            merged.append(arr1[i])\n            i += 1\n        else:\n            merged.append(arr2[j])\n            j += 1\n            \n    # Append any remaining elements from arr1 or arr2\n    merged.extend(arr1[i:])\n    merged.extend(arr2[j:])\n    \n    return merged\n\n# Example Usage\narr1 = [1, 3, 5]\narr2 = [2, 4, 6]\nprint(merge_sorted_arrays(arr1, arr2))\n# Output: [1, 2, 3, 4, 5, 6]",
+      "isCorrect": false,
+      "submittedAt": "2026-08-06T13:38:33.214Z"
+    },
+    {
+      "userId": "1438727184209416266",
+      "challengeId": "q_merge_sort",
+      "language": "python",
+      "code": "def merge_sorted_arrays(arr1, arr2):\n    i = 0\n    j = 0\n    merged = []\n\n    # Compare elements from both arrays\n    while i < len(arr1) and j < len(arr2):\n        if arr1[i] <= arr2[j]:\n            merged.append(arr1[i])\n            i += 1\n        else:\n            merged.append(arr2[j])\n            j += 1\n\n    # Add remaining elements\n    while i < len(arr1):\n        merged.append(arr1[i])\n        i += 1\n\n    while j < len(arr2):\n        merged.append(arr2[j])\n        j += 1\n\n    return merged\n\n\n# Input\narr1 = [1, 3, 5]\narr2 = [2, 4, 6]\n\n# Output\nresult = merge_sorted_arrays(arr1, arr2)\nprint(result)",
+      "isCorrect": false,
+      "submittedAt": "2026-08-06T13:40:33.531Z"
+    },
+    {
+      "userId": "1438025229774618734",
+      "challengeId": "q_merge_sort",
+      "language": "python",
+      "code": "arr1 = [1, 3, 5]\narr2 = [2, 4, 6]\n\ni = j = 0\nmerged = []\n\nwhile i < len(arr1) and j < len(arr2):\n    if arr1[i] <= arr2[j]:\n        merged.append(arr1[i])\n        i += 1\n    else:\n        merged.append(arr2[j])\n        j += 1\n\nwhile i < len(arr1):\n    merged.append(arr1[i])\n    i += 1\n\nwhile j < len(arr2):\n    merged.append(arr2[j])\n    j += 1\n\nprint(merged)",
+      "isCorrect": false,
+      "submittedAt": "2026-08-06T13:43:45.903Z"
+    },
+    {
+      "userId": "1438025229774618734",
+      "challengeId": "q_merge_sort",
+      "language": "python",
+      "code": "arr1 = [1, 3, 5]\narr2 = [2, 4, 6]\n\ni = j = 0\nmerged = []\n\nwhile i < len(arr1) and j < len(arr2):\n    if arr1[i] <= arr2[j]:\n        merged.append(arr1[i])\n        i += 1\n    else:\n        merged.append(arr2[j])\n        j += 1\n\nwhile i < len(arr1):\n    merged.append(arr1[i])\n    i += 1\n\nwhile j < len(arr2):\n    merged.append(arr2[j])\n    j += 1\n\nprint(merged)",
+      "isCorrect": false,
+      "submittedAt": "2026-08-06T13:48:40.024Z"
+    },
+    {
+      "userId": "1438025229774618734",
+      "challengeId": "q_reverse_string",
+      "language": "python",
+      "code": "def reverse_string(s):\n    return s[::-1]\n\nprint(reverse_string(\"hello\"))",
+      "isCorrect": false,
+      "submittedAt": "2026-08-06T13:50:04.407Z"
+    },
+    {
+      "userId": "1438025229774618734",
+      "challengeId": "q_valid_parentheses",
+      "language": "python",
+      "code": "def isValid(s):\n    stack = []\n    pairs = {')': '(', '}': '{', ']': '['}\n\n    for ch in s:\n        if ch in \"({[\":\n            stack.append(ch)\n        else:\n            if not stack or stack.pop() != pairs[ch]:\n                return False\n\n    return len(stack) == 0\n\nprint(isValid(\"({[]})\"))",
+      "isCorrect": false,
+      "submittedAt": "2026-08-06T14:00:06.780Z"
+    },
+    {
+      "userId": "1438025229774618734",
+      "challengeId": "q_valid_parentheses",
+      "language": "python",
+      "code": "def validParentheses(s):\n    stack = []\n    pairs = {')': '(', '}': '{', ']': '['}\n\n    for ch in s:\n        if ch in \"([{\":\n            stack.append(ch)\n        elif ch in \")]}\":\n            if not stack or stack.pop() != pairs[ch]:\n                return False\n\n    return len(stack) == 0\n\nprint(validParentheses(\"({[]})\"))",
+      "isCorrect": false,
+      "submittedAt": "2026-08-06T14:00:46.529Z"
+    },
+    {
+      "userId": "1438025229774618734",
+      "challengeId": "q_valid_parentheses",
+      "language": "python",
+      "code": "def validParentheses(s):\n    stack = []\n    pairs = {')': '(', '}': '{', ']': '['}\n\n    for ch in s:\n        if ch in \"([{\":\n            stack.append(ch)\n        elif ch in \")]}\":\n            if not stack or stack.pop() != pairs[ch]:\n                return False\n\n    return len(stack) == 0\n\nprint(validParentheses(\"({[]})\"))",
+      "isCorrect": true,
+      "submittedAt": "2026-08-06T14:22:31.228Z"
+    },
+    {
+      "userId": "1438025229774618734",
+      "challengeId": "q_two_sum",
+      "language": "python",
+      "code": "def twoSum(nums, target):\n    seen = {}\n\n    for i, num in enumerate(nums):\n        diff = target - num\n        if diff in seen:\n            return [seen[diff], i]\n        seen[num] = i\n\nprint(twoSum([2, 7, 11, 15], 9))",
+      "isCorrect": true,
+      "submittedAt": "2026-08-06T14:23:43.680Z"
+    }
+  ]
+}

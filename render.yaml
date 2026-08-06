@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: beelert-bot-service
+    env: node
+    region: singapore
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: BOT_TOKEN
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: PROGRAMMING_SERVER_ID
+        sync: false
+      - key: PROGRAMMING_CHANNEL_ID
+        sync: false

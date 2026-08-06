@@ -100,6 +100,14 @@ function isDuplicate(id) {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Bot status tracking
+let botStatus = {
+    isOnline: false,
+    connectedAt: null,
+    lastMessageSent: null,
+    totalMessagesSent: 0
+};
+
 // Create Discord client with necessary intents
 const client = new Client({
     intents: [
@@ -120,6 +128,14 @@ try {
     progressReminder.init(client, app, botStatus);
 } catch (error) {
     console.error('❌ Failed to initialize Daily Progress Reminder System plugin:', error);
+}
+
+// Initialize Daily Programming Challenge System plugin
+try {
+    const programmingChallenge = require('./programming-challenge');
+    programmingChallenge.init(client, app, botStatus);
+} catch (error) {
+    console.error('❌ Failed to initialize Daily Programming Challenge System plugin:', error);
 }
 
 // Configuration from environment variables
@@ -362,13 +378,6 @@ async function updateFestivalDate(festivalName, newDate) {
     }
 }
 
-// Bot status tracking
-let botStatus = {
-    isOnline: false,
-    connectedAt: null,
-    lastMessageSent: null,
-    totalMessagesSent: 0
-};
 
 // Voice channel meeting tracking
 const voiceMeetings = new Map(); // channelId -> { startTime, participants: Map(userId -> joinTime), lastActivity }
@@ -940,11 +949,47 @@ app.get('/', (req, res) => {
     res.redirect('/dashboard');
 });
 
+app.get('/ping', (req, res) => {
+    res.status(200).send('PONG');
+});
+
 app.get('/health', (req, res) => {
     res.status(200).json({
         status: 'OK',
+        botOnline: botStatus.isOnline,
         timestamp: new Date().toISOString()
     });
+});
+
+app.get('/', (req, res) => {
+    res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>BeeLert Bot Web Services</title>
+            <style>
+                body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #fff; text-align: center; padding: 50px 20px; }
+                h1 { color: #00f0ff; font-size: 32px; }
+                .card { background: #1e293b; padding: 24px; border-radius: 16px; margin: 20px auto; max-width: 520px; display: block; color: #fff; text-decoration: none; border: 1px solid #334155; transition: border-color 0.2s; }
+                .card:hover { border-color: #00f0ff; }
+                .card h2 { margin-top: 0; color: #38bdf8; }
+                .badge { background: #22c55e; color: #fff; padding: 6px 16px; border-radius: 20px; font-weight: bold; display: inline-block; margin-bottom: 20px; }
+            </style>
+        </head>
+        <body>
+            <h1>🤖 BeeLert Web Services Active</h1>
+            <div><span class="badge">Status: ${botStatus.isOnline ? 'ONLINE 🟢' : 'INITIALIZING 🟡'}</span></div>
+            <a href="/programming-dashboard" class="card">
+                <h2>🔥 Programming Challenge Dashboard</h2>
+                <p>View active daily challenges, global leaderboard, problem bank, and developer stats.</p>
+            </a>
+            <a href="/dashboard" class="card">
+                <h2>📊 Progress Reminder Dashboard</h2>
+                <p>View daily progress tracking, server configs, and reminder dispatch logs.</p>
+            </a>
+        </body>
+        </html>
+    `);
 });
 
 app.get('/status', (req, res) => {
@@ -1886,10 +1931,17 @@ client.once(Events.ClientReady, async (c) => {
         // Register slash commands
         try {
             console.log('Registering slash commands...');
+            let progCmds = [];
+            try {
+                progCmds = require('./programming-challenge').getSlashCommands().map(c => c.toJSON());
+            } catch(e) {
+                console.error('Error getting programming challenge commands:', e);
+            }
+            const allCommands = [...commands, ...progCmds];
             const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
             await rest.put(
                 Routes.applicationCommands(c.user.id),
-                { body: commands }
+                { body: allCommands }
             );
             console.log('✅ Slash commands registered successfully!');
         } catch (error) {
@@ -1956,6 +2008,13 @@ client.on(Events.InteractionCreate, async (interaction) => {
         if (interaction.isChatInputCommand()) {
             const { commandName, options } = interaction;
             
+            const progCommands = ['python', 'java', 'csharp', 'javascript', 'cpp', 'c', 'profile', 'challenge', 'programming-leaderboard'];
+            if (progCommands.includes(commandName)) {
+                const programmingChallenge = require('./programming-challenge');
+                await programmingChallenge.handleInteraction(interaction);
+                return;
+            }
+
             // /points command
             if (commandName === 'points') {
                 const targetUser = options.getUser('user') || interaction.user;

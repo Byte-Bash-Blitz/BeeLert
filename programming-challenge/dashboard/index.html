@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Programming Challenge System // Dashboard</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600;700&family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Background Animated Blobs -->
+    <div class="bg-glow">
+        <div class="glow-orb orb-1"></div>
+        <div class="glow-orb orb-2"></div>
+    </div>
+
+    <div class="app-layout">
+        <!-- Header -->
+        <header class="navbar">
+            <div class="brand">
+                <i class="fa-solid fa-code brand-icon"></i>
+                <div class="brand-text">
+                    <span class="brand-title">AURA // CODE</span>
+                    <span class="brand-sub">Programming Challenge System</span>
+                </div>
+            </div>
+
+            <nav class="nav-links">
+                <button class="nav-btn active" onclick="showTab('challenge')"><i class="fa-solid fa-fire"></i> Active Challenge</button>
+                <button class="nav-btn" onclick="showTab('leaderboard')"><i class="fa-solid fa-trophy"></i> Leaderboard</button>
+                <button class="nav-btn" onclick="showTab('questions')"><i class="fa-solid fa-cubes"></i> Problem Bank</button>
+                <button class="nav-btn" onclick="showTab('status')"><i class="fa-solid fa-server"></i> System Status</button>
+            </nav>
+
+            <div class="bot-indicator" id="bot-status-indicator">
+                <span class="pulse-ring"></span>
+                <span id="bot-status-label">ONLINE</span>
+            </div>
+        </header>
+
+        <!-- Main Content Grid -->
+        <main class="content-area">
+
+            <!-- TAB 1: ACTIVE CHALLENGE -->
+            <section id="tab-challenge" class="tab-page active">
+                <div class="challenge-hero-card glass">
+                    <div class="card-header">
+                        <div class="challenge-meta">
+                            <span class="tag tag-diff" id="ch-diff">Easy</span>
+                            <span class="tag tag-cat" id="ch-cat">Variables</span>
+                            <span class="tag tag-xp" id="ch-xp">+10 XP</span>
+                        </div>
+                        <div class="countdown-badge">
+                            <i class="fa-regular fa-clock"></i> Next Challenge: <span id="countdown-timer">08:00:00</span>
+                        </div>
+                    </div>
+
+                    <h1 class="challenge-title" id="ch-title">Loading Active Challenge...</h1>
+                    <div class="challenge-desc" id="ch-desc">Checking for today's posted daily programming challenge...</div>
+
+                    <div class="testcases-grid">
+                        <div class="tc-box">
+                            <span class="tc-label"><i class="fa-solid fa-arrow-right-to-bracket"></i> Sample Input</span>
+                            <pre class="code-block" id="ch-input">Fetching...</pre>
+                        </div>
+                        <div class="tc-box">
+                            <span class="tc-label"><i class="fa-solid fa-arrow-right-from-bracket"></i> Expected Output</span>
+                            <pre class="code-block" id="ch-expected">Fetching...</pre>
+                        </div>
+                    </div>
+
+                    <div class="hint-box">
+                        <i class="fa-solid fa-lightbulb hint-icon"></i>
+                        <div>
+                            <strong>Hint:</strong> <span id="ch-hint">Think about step by step logic.</span>
+                        </div>
+                    </div>
+
+                    <div class="how-to-submit">
+                        <h3><i class="fa-solid fa-terminal"></i> How to Submit in Discord</h3>
+                        <div class="lang-pills">
+                            <code>/python</code>
+                            <code>/javascript</code>
+                            <code>/java</code>
+                            <code>/csharp</code>
+                            <code>/cpp</code>
+                            <code>/c</code>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: LEADERBOARD -->
+            <section id="tab-leaderboard" class="tab-page">
+                <div class="panel glass">
+                    <div class="panel-header">
+                        <h2><i class="fa-solid fa-trophy gold-text"></i> Global Developer Leaderboard</h2>
+                        <span class="sub-text">Rankings based on XP, challenges solved, streaks, and accuracy</span>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="leaderboard-table">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Developer</th>
+                                    <th>XP Points</th>
+                                    <th>Solved</th>
+                                    <th>Current Streak</th>
+                                    <th>Accuracy</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leaderboard-rows">
+                                <tr><td colspan="6" class="text-center">Loading leaderboard...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: PROBLEM BANK -->
+            <section id="tab-questions" class="tab-page">
+                <div class="panel glass">
+                    <div class="panel-header">
+                        <h2><i class="fa-solid fa-cubes cyan-text"></i> Question Bank Explorer</h2>
+                        <span class="sub-text">Browse all challenges across 14 categories & difficulty levels</span>
+                    </div>
+
+                    <div class="questions-grid" id="questions-list">
+                        <div class="text-center">Loading question bank...</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: SYSTEM STATUS -->
+            <section id="tab-status" class="tab-page">
+                <div class="status-grid">
+                    <div class="stat-card glass">
+                        <i class="fa-solid fa-heart-pulse stat-icon"></i>
+                        <span class="stat-title">Keep-Alive Status</span>
+                        <span class="stat-value green-text" id="sys-status">200 OK</span>
+                    </div>
+                    <div class="stat-card glass">
+                        <i class="fa-solid fa-clock stat-icon"></i>
+                        <span class="stat-title">System Uptime</span>
+                        <span class="stat-value" id="sys-uptime">0s</span>
+                    </div>
+                    <div class="stat-card glass">
+                        <i class="fa-solid fa-database stat-icon"></i>
+                        <span class="stat-title">Database Storage</span>
+                        <span class="stat-value cyan-text" id="sys-db">Supabase Hybrid</span>
+                    </div>
+                    <div class="stat-card glass">
+                        <i class="fa-solid fa-bolt stat-icon"></i>
+                        <span class="stat-title">Schedule Cron</span>
+                        <span class="stat-value purple-text">Daily 8:00 AM IST</span>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
