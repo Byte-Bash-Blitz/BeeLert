@@ -239,12 +239,31 @@ async function renderProfile(user) {
  * Message command listener handler (!python, /python, etc.).
  */
 async function handleMessageCommand(message) {
-    if (message.author.bot) return;
+    if (!message || message.author?.bot) return;
 
-    const content = message.content.trim();
-    if (!content.startsWith('/') && !content.startsWith('!')) return;
+    // 1. Strict Server & Channel Filter
+    const targetChannelId = config.channelId || process.env.PROGRAMMING_CHANNEL_ID;
+    const targetServerId = config.serverId || process.env.PROGRAMMING_SERVER_ID;
 
-    const firstSpace = content.indexOf(' ');
+    // Ignore DMs, threads, voice, forums, and all non-matching channels/servers immediately
+    if (!message.guild || !targetChannelId || message.channel.id !== targetChannelId) return;
+    if (targetServerId && message.guild.id !== targetServerId) return;
+
+    // 2. Strict Message Validation Filter
+    // Only process messages starting with /python, /java, /javascript, /csharp, /cpp, /c
+    const content = message.content ? message.content.trim() : '';
+    const validPrefixes = ['/python', '/java', '/javascript', '/csharp', '/cpp', '/c'];
+    
+    const lowerContent = content.toLowerCase();
+    const hasValidPrefix = validPrefixes.some(prefix => 
+        lowerContent === prefix || lowerContent.startsWith(prefix + ' ') || lowerContent.startsWith(prefix + '\n')
+    );
+
+    if (!hasValidPrefix) {
+        return; // Ignore completely! No AI, no code evaluation, no reply, no logs.
+    }
+
+    const firstSpace = content.search(/\s/);
     const commandName = (firstSpace !== -1 ? content.slice(1, firstSpace) : content.slice(1)).toLowerCase();
     const rawArgs = firstSpace !== -1 ? content.slice(firstSpace + 1).trim() : '';
 

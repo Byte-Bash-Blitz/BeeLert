@@ -30,13 +30,13 @@ async function getValidatedClanChannel(client, pair) {
     }
 }
 
-// 1. FIRST REMINDER: 9:00 PM (Consolidated Clan Channel Message)
+// 1. FIRST REMINDER: 9:00 PM (Automatic Direct DMs to missing tracked members)
 async function runFirstReminder(client, pair, index) {
     const channelId = pair.communityProgressChannelId;
     const trackedMembers = pair.trackedMembers;
     if (!trackedMembers || trackedMembers.length === 0) return;
 
-    console.log(`🚀 [Progress Reminder] Running 9:00 PM first reminder check for pair ${index + 1}...`);
+    console.log(`🚀 [Progress Reminder] Running 9:00 PM DM reminder check for pair ${index + 1}...`);
     
     try {
         // Fetch users who posted today
@@ -46,44 +46,43 @@ async function runFirstReminder(client, pair, index) {
         const unsubmittedMembers = trackedMembers.filter(userId => !postedUsers.has(userId));
         
         if (unsubmittedMembers.length === 0) {
-            console.log(`✅ [Progress Reminder] All tracked members have submitted progress for pair ${index + 1}. No reminders needed.`);
+            console.log(`✅ [Progress Reminder] All tracked members have submitted progress for pair ${index + 1}. No 9:00 PM DMs needed.`);
             return;
         }
 
-        // Filter out users who already received the first reminder today
-        const membersToRemind = [];
         for (const userId of unsubmittedMembers) {
-            const alreadyReminded = await state.isReminded(channelId, userId, 'first');
-            if (!alreadyReminded) {
-                membersToRemind.push(userId);
-            }
-        }
+            try {
+                // Check if already sent 9:00 PM reminder today
+                const alreadyReminded = await state.isReminded(channelId, userId, 'first');
+                if (alreadyReminded) {
+                    console.log(`ℹ️ [Progress Reminder] User ${userId} already received 9:00 PM DM today. Skipping.`);
+                    continue;
+                }
 
-        if (membersToRemind.length === 0) {
-            console.log(`ℹ️ [Progress Reminder] 9:00 PM reminders already sent today for all unsubmitted members in pair ${index + 1}.`);
-            return;
-        }
+                console.log(`✉️ [Progress Reminder] Sending 9:00 PM DM to user: ${userId}`);
+                const user = await client.users.fetch(userId);
+                if (user) {
+                    const dmText = 
+                        `Hello! 👋\n\n` +
+                        `You haven't posted your daily progress today.\n\n` +
+                        `Please submit your progress in <#${channelId}>.\n\n` +
+                        `Keep your streak alive! 🔥\n\n` +
+                        `Thank you.`;
 
-        // Send consolidated alert to clan reminder channel
-        const clanChannel = await getValidatedClanChannel(client, pair);
-        if (clanChannel) {
-            const mentionsStr = membersToRemind.map(id => `<@${id}>`).join('\n');
-            const messageText = 
-                `📢 **Daily Progress Reminder**\n\n` +
-                `The following members have not submitted today's progress:\n\n` +
-                `${mentionsStr}\n\n` +
-                `Please submit your daily progress in the Community Server.`;
-            
-            await clanChannel.send(messageText);
-            console.log(`📢 [Progress Reminder] Posted consolidated 9:00 PM progress reminder in channel ${pair.clanReminderChannelId} for ${membersToRemind.length} users.`);
-
-            // Log first reminder in state/database for these users
-            for (const userId of membersToRemind) {
+                    await user.send(dmText);
+                    console.log(`✉️ [Progress Reminder] 9:00 PM DM successfully sent to user ${userId}`);
+                }
+                
+                // Record in database/state that today's reminder has been sent
+                await state.markReminded(channelId, userId, 'first');
+            } catch (dmError) {
+                console.warn(`⚠️ [Progress Reminder] Failed to send 9:00 PM DM to user ${userId} (DMs disabled/error): ${dmError.message}`);
+                // Record in state anyway to prevent infinite retry loops
                 await state.markReminded(channelId, userId, 'first');
             }
         }
     } catch (error) {
-        console.error(`❌ [Progress Reminder] Error running 9:00 PM reminder for pair ${index + 1}:`, error.message);
+        console.error(`❌ [Progress Reminder] Error running 9:00 PM DM reminders for pair ${index + 1}:`, error.message);
     }
 }
 
@@ -108,12 +107,14 @@ async function runSecondReminder(client, pair, index) {
                 console.log(`✉️ [Progress Reminder] Sending 11:00 PM private DM to user: ${userId}`);
                 const user = await client.users.fetch(userId);
                 if (user) {
-                    await user.send(
-                        `Hello!\n\n` +
+                    const dmText = 
+                        `Hello! 👋\n\n` +
                         `You haven't posted your daily progress today.\n\n` +
-                        `Please post your progress in <#${channelId}>.\n\n` +
-                        `Thank you.`
-                    );
+                        `Please submit your progress in <#${channelId}>.\n\n` +
+                        `Keep your streak alive! 🔥\n\n` +
+                        `Thank you.`;
+
+                    await user.send(dmText);
                     console.log(`✉️ [Progress Reminder] 11:00 PM DM successfully sent to user ${userId}`);
                 }
                 

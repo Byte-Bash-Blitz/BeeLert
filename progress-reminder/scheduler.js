@@ -51,7 +51,7 @@ function startScheduler(client) {
             } catch (error) {
                 console.error(`❌ [Progress Reminder] Error running first reminder job for pair ${index + 1}:`, error.message);
             }
-        });
+        }, { scheduled: true, timezone: 'Asia/Kolkata' });
 
         // B. 11:00 PM Private DM Reminder (Second Reminder)
         const secondPattern = getCronPatternFromTime(pair.secondReminderTime, '23:00');
@@ -63,7 +63,7 @@ function startScheduler(client) {
             } catch (error) {
                 console.error(`❌ [Progress Reminder] Error running second reminder job for pair ${index + 1}:`, error.message);
             }
-        });
+        }, { scheduled: true, timezone: 'Asia/Kolkata' });
 
         // C. 10:00 AM Inactive Alert (Next Day Inactivity check)
         const inactivePattern = getCronPatternFromTime(pair.inactiveAlertTime, '10:00');
@@ -75,7 +75,7 @@ function startScheduler(client) {
             } catch (error) {
                 console.error(`❌ [Progress Reminder] Error running inactive alert job for pair ${index + 1}:`, error.message);
             }
-        });
+        }, { scheduled: true, timezone: 'Asia/Kolkata' });
     });
 
     // D. Midnight State Reset Job (forces local cache reset exactly at midnight)
@@ -86,7 +86,7 @@ function startScheduler(client) {
         } catch (error) {
             console.error('❌ [Progress Reminder] Error resetting state at midnight:', error.message);
         }
-    });
+    }, { scheduled: true, timezone: 'Asia/Kolkata' });
 
     console.log('✅ [Progress Reminder] Dynamic multi-stage cron scheduler started.');
 }

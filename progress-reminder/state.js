@@ -108,7 +108,9 @@ const stateManager = {
         refreshStateDate();
         ensureChannelState(channelId);
 
-        // A. Database check (Source of truth)
+        const localSet = new Set(currentState.channels[channelId].posted || []);
+
+        // A. Database check (Source of truth merged with local scan)
         if (this.isDbConfigured()) {
             try {
                 const todayStr = getTodayString();
@@ -119,11 +121,12 @@ const stateManager = {
                     .in('discord_user_id', trackedMembers);
 
                 if (!error && data) {
-                    const postedSet = new Set(data.map(row => row.discord_user_id));
+                    const dbSet = new Set(data.map(row => row.discord_user_id));
+                    const mergedSet = new Set([...dbSet, ...localSet]);
                     // Synchronize local file cache
-                    currentState.channels[channelId].posted = Array.from(postedSet);
+                    currentState.channels[channelId].posted = Array.from(mergedSet);
                     saveState(currentState);
-                    return postedSet;
+                    return mergedSet;
                 }
             } catch (err) {
                 console.warn('⚠️ [Progress Reminder] Database fetch of posted members failed, using local file cache fallback:', err.message);
@@ -131,7 +134,7 @@ const stateManager = {
         }
 
         // B. File fallback
-        return new Set(currentState.channels[channelId].posted);
+        return localSet;
     },
 
     // 2. Inactive members (missed 2 consecutive days) tracking
@@ -216,7 +219,10 @@ const stateManager = {
                         community_progress_channel_id: channelId,
                         discord_user_id: userId,
                         reminder_type: type,
-                        reminder_date: todayStr
+                        reminder_date: todayStr,
+                        progress_submitted: false,
+                        reminder_sent: true,
+                        reminder_time: new Date().toISOString()
                     });
 
                 if (!error) {
@@ -242,7 +248,13 @@ const stateManager = {
         refreshStateDate();
         ensureChannelState(channelId);
 
-        // A. Database check
+        // A. File check first
+        const remindedList = currentState.channels[channelId].reminded[type] || [];
+        if (remindedList.includes(userId)) {
+            return true;
+        }
+
+        // B. Database check
         if (this.isDbConfigured()) {
             try {
                 const todayStr = getTodayString();
@@ -255,17 +267,19 @@ const stateManager = {
                     .eq('reminder_date', todayStr)
                     .limit(1);
 
-                if (!error && data) {
-                    return data.length > 0;
+                if (!error && data && data.length > 0) {
+                    if (!currentState.channels[channelId].reminded[type].includes(userId)) {
+                        currentState.channels[channelId].reminded[type].push(userId);
+                        saveState(currentState);
+                    }
+                    return true;
                 }
             } catch (err) {
                 console.warn('⚠️ [Progress Reminder] Database lookup failed, using local file cache fallback:', err.message);
             }
         }
 
-        // B. File check
-        const remindedList = currentState.channels[channelId].reminded[type] || [];
-        return remindedList.includes(userId);
+        return false;
     },
     
     resetStateForNewDay() {

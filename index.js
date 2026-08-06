@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Events, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, Partials, MessageFlags, GuildScheduledEventEntityType, GuildScheduledEventPrivacyLevel, SlashCommandBuilder, REST, Routes } = require('discord.js');
+const { Client, GatewayIntentBits, Events, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, Partials, MessageFlags, GuildScheduledEventEntityType, GuildScheduledEventPrivacyLevel, SlashCommandBuilder, REST, Routes, PermissionFlagsBits } = require('discord.js');
 const cron = require('node-cron');
 const express = require('express');
 require('dotenv').config();
@@ -193,7 +193,15 @@ const commands = [
                 )),
     new SlashCommandBuilder()
         .setName('mystats')
-        .setDescription('View your detailed voice activity statistics')
+        .setDescription('View your detailed voice activity statistics'),
+    new SlashCommandBuilder()
+        .setName('testdm')
+        .setDescription('Test the 9:00 PM DM reminder (checks who has not posted progress today).')
+        .addUserOption(option =>
+            option.setName('user')
+                .setDescription('Target specific user to test (optional)')
+                .setRequired(false))
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator | PermissionFlagsBits.ManageGuild | PermissionFlagsBits.ManageMessages)
 ].map(command => command.toJSON());
 
 // Helper functions to get data from Supabase
@@ -1392,41 +1400,10 @@ function formatISTDate(date) {
     return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
 }
 
-// Send daily progress update
+// Send daily progress update (DISABLED - Replaced by 9:00 PM Direct DM Reminder system)
 async function sendDailyUpdate() {
-    try {
-        if (!CHANNEL_ID) {
-            console.error('Error: CHANNEL_ID environment variable not set');
-            return;
-        }
-        const channel = await client.channels.fetch(CHANNEL_ID);
-        if (!channel) {
-            console.error(`Error: Could not find channel with ID ${CHANNEL_ID}`);
-            return;
-        }
-
-        const guild = channel.guild;
-        const role = guild.roles.cache.find(r => r.name === ROLE_NAME);
-
-        if (!role) {
-            console.error(`Error: Could not find role '${ROLE_NAME}'`);
-            return;
-        }
-
-        const now = getISTTime();
-        const currentTime = formatISTTime(now);
-        const dailyQuote = getDailyMotivation();
-
-        const message = `${role} Heyyy everyone! Hope everyone is fine! 😊\n\n` +
-            `This is a gentle reminder to update your daily progress. 📝\n\n` +
-            `💡 **Today's Motivation:**\n` +
-            `_${dailyQuote}_`;
-
-        await channel.send(message);
-        console.log(`Daily update sent at ${currentTime}`);
-    } catch (error) {
-        console.error('Error sending daily update:', error);
-    }
+    console.log('ℹ️ Old channel ping sendDailyUpdate is disabled.');
+    return;
 }
 
 // Extracted cron registration so secondary→primary promotion can also call it
@@ -1874,36 +1851,7 @@ async function registerCronJobs() {
         console.error('Error posting meeting manager:', error);
     }
 
-    // Startup backup: check if daily update needs to be sent (in case bot was down at 9 PM)
-    setTimeout(async () => {
-        if (!CHANNEL_ID) { console.log('⚠️ CHANNEL_ID not set, skipping startup daily update check'); return; }
-        try {
-            const now = getISTTime();
-            const hour = now.getHours();
-            // If it's past 9 PM IST, check if daily update was already sent today
-            if (hour >= 21) {
-                const channel = await client.channels.fetch(CHANNEL_ID);
-                if (channel) {
-                    const recentMessages = await channel.messages.fetch({ limit: 20 });
-                    const todayStart = new Date(now);
-                    todayStart.setHours(0, 0, 0, 0);
-                    const alreadySent = recentMessages.some(msg =>
-                        msg.author.id === client.user.id &&
-                        msg.createdTimestamp >= todayStart.getTime() &&
-                        msg.content.includes('gentle reminder to post your daily progress')
-                    );
-                    if (!alreadySent) {
-                        console.log('📢 Startup backup: Daily update not sent today, sending now...');
-                        await sendDailyUpdate();
-                    } else {
-                        console.log('✅ Startup backup: Daily update already sent today');
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Error in startup daily update check:', error);
-        }
-    }, 12000);
+    // Old daily update startup backup check disabled (replaced by Direct DM system)
 
     console.log('✅ All cron jobs and startup checks registered');
 }
@@ -2014,6 +1962,65 @@ client.on(Events.InteractionCreate, async (interaction) => {
             if (progCommands.includes(commandName)) {
                 const programmingChallenge = require('./programming-challenge');
                 await programmingChallenge.handleInteraction(interaction);
+                return;
+            }
+
+            // /testdm command
+            if (commandName === 'testdm') {
+                const targetUser = options.getUser('user');
+
+                try {
+                    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+                    
+                    const prConfig = require('./progress-reminder/config');
+                    const notifier = require('./progress-reminder/notifier');
+                    const state = require('./progress-reminder/state');
+                    const pair = (prConfig.pairs && prConfig.pairs[0]) || {};
+                    const channelId = pair.communityProgressChannelId || process.env.COMMUNITY_PROGRESS_CHANNEL_ID || 'COMMUNITY_PROGRESS_CHANNEL_ID';
+                    const trackedMembers = pair.trackedMembers || [];
+
+                    const postedUsers = await state.getPostedMembersToday(channelId, trackedMembers);
+
+                    if (targetUser) {
+                        // Check if specific user has posted today
+                        if (postedUsers.has(targetUser.id)) {
+                            return interaction.editReply({ 
+                                content: `ℹ️ <@${targetUser.id}> has **already posted** their progress today! No DM sent.` 
+                            });
+                        }
+
+                        const dmText = 
+                            `Hello! 👋\n\n` +
+                            `You haven't posted your daily progress today.\n\n` +
+                            `Please submit your progress in <#${channelId}>.\n\n` +
+                            `Keep your streak alive! 🔥\n\n` +
+                            `Thank you.`;
+
+                        await targetUser.send(dmText);
+                        await state.markReminded(channelId, targetUser.id, 'first');
+
+                        return interaction.editReply({ 
+                            content: `✅ Reminder DM successfully sent to <@${targetUser.id}> (they have not posted progress today).` 
+                        });
+                    } else {
+                        // Batch test for all missing members
+                        const unsubmitted = trackedMembers.filter(id => !postedUsers.has(id));
+                        if (unsubmitted.length === 0) {
+                            return interaction.editReply({ 
+                                content: `✅ All tracked members have already posted their progress today! No DMs sent.` 
+                            });
+                        }
+
+                        await notifier.runFirstReminder(interaction.client, pair, 0);
+
+                        return interaction.editReply({ 
+                            content: `✅ Executed 9:00 PM DM check! Sent DMs to **${unsubmitted.length}** member(s) who haven't posted today.` 
+                        });
+                    }
+                } catch (err) {
+                    console.error('❌ Failed to execute test DM command:', err.message);
+                    await interaction.editReply({ content: `❌ Error executing test DM: ${err.message}` });
+                }
                 return;
             }
 
@@ -3488,7 +3495,16 @@ client.on(Events.MessageCreate, async (message) => {
             const contextId = `channel_${message.channel.id}`;
             const history = getHistory(contextId);
             
-            const systemPrompt = `You are BeeLert, a helpful AI assistant in a Discord server. You have conversation memory and can reference previous messages. Answer questions naturally and helpfully. For code or technical requests, provide complete implementations.
+            const systemPrompt = `You are BeeLert, a friendly AI community member in a Discord server. You have conversation memory and can reference previous messages.
+
+Personality Rules:
+- Reply naturally like a friendly community member.
+- Speak primarily in Thanglish (Tamil + English).
+- Use a casual, fun, and respectful tone (e.g. use "machi", "da").
+- Use emojis naturally but do not overuse them.
+- Answer general questions, have normal conversations, and help members.
+- Explain programming concepts in simple Thanglish when asked.
+- Motivate members positively.
 
 CRITICAL RULE: NEVER wrap code in triple backticks or code blocks. Discord will convert code blocks into downloadable files which users cannot read. Instead, just type the code as plain text directly. Do NOT use \`\`\` at all. You can use single backticks for short inline code only.`;
             
@@ -3531,7 +3547,7 @@ CRITICAL RULE: NEVER wrap code in triple backticks or code blocks. Discord will 
                     "• Ask me anything by mentioning me\n" +
                     "• DM me for personal reminders\n" +
                     "• Chat in <#" + GEMINI_CHANNEL_ID + "> for AI conversations\n\n" +
-                    "Try: `@BeeLert what's the weather like?`"
+                    "Try: `@BeeLert enna machi pannitu iruka?`"
                 );
                 return;
             }
@@ -3540,7 +3556,14 @@ CRITICAL RULE: NEVER wrap code in triple backticks or code blocks. Discord will 
             const contextId = `mention_${message.channel.id}`;
             const history = getHistory(contextId);
             
-            const systemPrompt = `You are BeeLert, a helpful AI assistant in a Discord server. A user mentioned you with a question. Answer helpfully. For code or technical requests, provide complete implementations.
+            const systemPrompt = `You are BeeLert, a friendly AI community member in a Discord server. A user mentioned you with a question.
+
+Personality Rules:
+- Reply naturally like a friendly community member.
+- Speak primarily in Thanglish (Tamil + English).
+- Use a casual, fun, and respectful tone (e.g. use "machi", "da").
+- Use emojis naturally.
+- Answer general questions, help members, and explain concepts in simple Thanglish.
 
 CRITICAL RULE: NEVER wrap code in triple backticks or code blocks. Discord will convert code blocks into downloadable files which users cannot read. Instead, just type the code as plain text directly. Do NOT use \`\`\` at all.`;
             
