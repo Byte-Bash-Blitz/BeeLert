@@ -296,8 +296,11 @@ async function getLeaderboardData() {
                 usersList = data.map(d => ({
                     userId: d.user_id,
                     xp: d.xp || 0,
+                    level: d.level || Math.floor((d.xp || 0) / 100) + 1,
+                    communityPoints: d.community_points || 0,
                     solved: (d.solved_questions || []).length,
                     streak: d.current_streak || 0,
+                    highestStreak: d.highest_streak || 0,
                     accuracy: d.accuracy || 0,
                     lastSolvedDate: d.last_solved_date
                 }));
@@ -311,8 +314,11 @@ async function getLeaderboardData() {
         usersList = Object.values(localData.users).map(u => ({
             userId: u.userId,
             xp: u.xp || 0,
+            level: Math.floor((u.xp || 0) / 100) + 1,
+            communityPoints: u.communityPoints || 0,
             solved: (u.solvedQuestions || []).length,
             streak: u.currentStreak || 0,
+            highestStreak: u.highestStreak || 0,
             accuracy: u.attempts > 0 ? parseFloat(((u.solvedQuestions.length / u.attempts) * 100).toFixed(1)) : 0,
             lastSolvedDate: u.lastSolvedDate
         })).sort((a, b) => b.xp - a.xp);
@@ -336,6 +342,7 @@ async function resetLeaderboard() {
 
 module.exports = {
     initDB,
+    isSupabaseConfigured,
     getUserProfile,
     saveUserProfile,
     getActiveChallenge,

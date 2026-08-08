@@ -33,6 +33,7 @@
                 <button class="nav-btn" onclick="showTab('leaderboard')"><i class="fa-solid fa-trophy"></i> Leaderboard</button>
                 <button class="nav-btn" onclick="showTab('questions')"><i class="fa-solid fa-cubes"></i> Problem Bank</button>
                 <button class="nav-btn" onclick="showTab('status')"><i class="fa-solid fa-server"></i> System Status</button>
+                <button class="nav-btn" onclick="showTab('admin')"><i class="fa-solid fa-user-shield"></i> Admin Panel</button>
             </nav>
 
             <div class="bot-indicator" id="bot-status-indicator">
@@ -108,13 +109,14 @@
                                     <th>Rank</th>
                                     <th>Developer</th>
                                     <th>XP Points</th>
+                                    <th>Community Points</th>
                                     <th>Solved</th>
                                     <th>Current Streak</th>
                                     <th>Accuracy</th>
                                 </tr>
                             </thead>
                             <tbody id="leaderboard-rows">
-                                <tr><td colspan="6" class="text-center">Loading leaderboard...</td></tr>
+                                <tr><td colspan="7" class="text-center">Loading leaderboard...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -157,6 +159,99 @@
                         <i class="fa-solid fa-bolt stat-icon"></i>
                         <span class="stat-title">Schedule Cron</span>
                         <span class="stat-value purple-text">Daily 8:00 AM IST</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: ADMIN PANEL -->
+            <section id="tab-admin" class="tab-page">
+                <!-- Login View -->
+                <div id="admin-login-view" class="panel glass" style="max-width: 480px; margin: 40px auto; text-align: center;">
+                    <div class="panel-header">
+                        <h2><i class="fa-solid fa-lock gold-text"></i> Admin Secret Authentication</h2>
+                        <span class="sub-text">Enter Admin Key to unlock system controls</span>
+                    </div>
+                    <div style="margin-top: 20px;">
+                        <input type="password" id="admin-secret-input" placeholder="Enter Admin Secret Key..." style="width: 100%; padding: 12px 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.4); color: #fff; font-family: 'Fira Code', monospace; margin-bottom: 16px;">
+                        <button onclick="loginAdmin()" class="nav-btn active" style="width: 100%; justify-content: center; padding: 12px;"><i class="fa-solid fa-key"></i> Authenticate Admin</button>
+                        <p id="admin-login-error" style="color: #e74c3c; margin-top: 12px; font-size: 13px; display: none;"></p>
+                    </div>
+                </div>
+
+                <!-- Control Panel View -->
+                <div id="admin-control-view" style="display: none;">
+                    <div class="panel glass" style="margin-bottom: 24px;">
+                        <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h2><i class="fa-solid fa-bolt gold-text"></i> Quick Admin Controls</h2>
+                                <span class="sub-text">Trigger immediate daily challenge operations</span>
+                            </div>
+                            <button onclick="logoutAdmin()" class="tag tag-diff" style="cursor: pointer;"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+                        </div>
+                        <div style="display: flex; gap: 16px; flex-wrap: wrap; margin-top: 16px;">
+                            <button onclick="adminForcePost()" class="nav-btn active" style="background: linear-gradient(135deg, #e67e22, #f39c12);"><i class="fa-solid fa-paper-plane"></i> Force Post Challenge</button>
+                            <button onclick="adminSkipChallenge()" class="nav-btn" style="background: linear-gradient(135deg, #2980b9, #3498db);"><i class="fa-solid fa-forward"></i> Skip Active Challenge</button>
+                            <button onclick="adminResetLeaderboard()" class="nav-btn" style="background: linear-gradient(135deg, #c0392b, #e74c3c);"><i class="fa-solid fa-trash-can"></i> Reset Leaderboard</button>
+                        </div>
+                        <div id="admin-action-status" style="margin-top: 16px; font-family: 'Fira Code', monospace; font-size: 13px;"></div>
+                    </div>
+
+                    <!-- Today's Challenge Solution & Answer View -->
+                    <div class="panel glass" style="margin-bottom: 24px; border-left: 4px solid #f1c40f;">
+                        <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h2><i class="fa-solid fa-key gold-text"></i> Today's Challenge Solution & Expected Answer</h2>
+                                <span class="sub-text">Admin confidential view of active problem expected outputs</span>
+                            </div>
+                            <button onclick="fetchAdminSolution()" class="nav-btn" style="padding: 6px 12px; font-size: 12px;"><i class="fa-solid fa-rotate"></i> Refresh</button>
+                        </div>
+                        <div id="admin-solution-content" style="margin-top: 16px;">
+                            <div style="color: var(--text-muted);">Loading solution data...</div>
+                        </div>
+                    </div>
+
+                    <div class="panel glass">
+                        <div class="panel-header">
+                            <h2><i class="fa-solid fa-plus-circle cyan-text"></i> Add New Challenge Question</h2>
+                            <span class="sub-text">Create and save a new problem to the Question Bank</span>
+                        </div>
+                        <form id="add-question-form" onsubmit="adminAddQuestion(event)" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
+                            <div style="grid-column: span 2;">
+                                <label style="display: block; font-size: 12px; margin-bottom: 4px; color: var(--text-muted);">Title</label>
+                                <input type="text" id="q-title" required placeholder="e.g. Reverse Linked List" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: #fff;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 12px; margin-bottom: 4px; color: var(--text-muted);">Difficulty</label>
+                                <select id="q-diff" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(20,20,30,0.9); color: #fff;">
+                                    <option value="Easy">Easy</option>
+                                    <option value="Medium">Medium</option>
+                                    <option value="Hard">Hard</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 12px; margin-bottom: 4px; color: var(--text-muted);">Category</label>
+                                <input type="text" id="q-cat" required placeholder="e.g. Data Structures" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: #fff;">
+                            </div>
+                            <div style="grid-column: span 2;">
+                                <label style="display: block; font-size: 12px; margin-bottom: 4px; color: var(--text-muted);">Problem Description</label>
+                                <textarea id="q-desc" required rows="3" placeholder="Write the problem statement..." style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: #fff;"></textarea>
+                            </div>
+                            <div style="grid-column: span 2;">
+                                <label style="display: block; font-size: 12px; margin-bottom: 4px; color: var(--text-muted);">Hint (Optional)</label>
+                                <input type="text" id="q-hint" placeholder="e.g. Use two pointers" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: #fff;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 12px; margin-bottom: 4px; color: var(--text-muted);">Sample Input</label>
+                                <input type="text" id="q-input" placeholder='e.g. "hello"' style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: #fff;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 12px; margin-bottom: 4px; color: var(--text-muted);">Sample Expected Output</label>
+                                <input type="text" id="q-expected" placeholder='e.g. "olleh"' style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: #fff;">
+                            </div>
+                            <div style="grid-column: span 2; margin-top: 8px;">
+                                <button type="submit" class="nav-btn active" style="width: 100%; justify-content: center; padding: 12px;"><i class="fa-solid fa-plus"></i> Save to Question Bank</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </section>

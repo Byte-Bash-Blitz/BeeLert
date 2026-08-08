@@ -1062,30 +1062,47 @@ function formatISTTime(date) {
 
 // Function to post Meeting Manager interface
 async function postMeetingManager(channel) {
-    const row = new ActionRowBuilder()
-        .addComponents(
-            new ButtonBuilder()
-                .setCustomId('schedule_meeting')
-                .setLabel('� Use Form')
-                .setStyle(ButtonStyle.Primary),
-            new ButtonBuilder()
-                .setCustomId('start_wizard')
-                .setLabel('💬 Step-by-Step')
-                .setStyle(ButtonStyle.Success),
-            new ButtonBuilder()
-                .setCustomId('view_meetings')
-                .setLabel('📋 View Meetings')
-                .setStyle(ButtonStyle.Secondary),
+    if (!channel) return;
+    try {
+        const recentMessages = await channel.messages.fetch({ limit: 10 });
+        const alreadyPosted = recentMessages.some(msg =>
+            msg.author.id === client.user.id &&
+            msg.content.includes('MEETING SCHEDULER')
         );
 
-    await channel.send({
-        content: '📅 **MEETING SCHEDULER**\n\n' +
-                 '**Two ways to schedule:**\n\n' +
-                 '📝 **Use Form** - Quick modal form (fill all at once)\n' +
-                 '💬 **Step-by-Step** - Guided chat wizard (one question at a time)\n\n' +
-                 '📋 **View Meetings** - See all upcoming meetings',
-        components: [row]
-    });
+        if (alreadyPosted) {
+            console.log('✅ Meeting Manager interface is already present in channel. Skipping duplicate post.');
+            return;
+        }
+
+        const row = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('schedule_meeting')
+                    .setLabel('✏️ Use Form')
+                    .setStyle(ButtonStyle.Primary),
+                new ButtonBuilder()
+                    .setCustomId('start_wizard')
+                    .setLabel('💬 Step-by-Step')
+                    .setStyle(ButtonStyle.Success),
+                new ButtonBuilder()
+                    .setCustomId('view_meetings')
+                    .setLabel('📋 View Meetings')
+                    .setStyle(ButtonStyle.Secondary),
+            );
+
+        await channel.send({
+            content: '📅 **MEETING SCHEDULER**\n\n' +
+                     '**Two ways to schedule:**\n\n' +
+                     '📝 **Use Form** - Quick modal form (fill all at once)\n' +
+                     '💬 **Step-by-Step** - Guided chat wizard (one question at a time)\n\n' +
+                     '📋 **View Meetings** - See all upcoming meetings',
+            components: [row]
+        });
+        console.log(`📋 Meeting Manager posted`);
+    } catch (error) {
+        console.error('Error posting meeting manager:', error);
+    }
 }
 
 // Function to send meeting reminder in general channel
@@ -2648,11 +2665,17 @@ client.on(Events.InteractionCreate, async (interaction) => {
         
     } catch (error) {
         console.error('Error handling interaction:', error);
-        if (!interaction.replied && !interaction.deferred) {
-            await interaction.reply({
-                content: '❌ An error occurred while processing your request.',
-                flags: MessageFlags.Ephemeral
-            }).catch(console.error);
+        if (!interaction.replied) {
+            if (interaction.deferred) {
+                await interaction.editReply({
+                    content: '❌ An error occurred while processing your request.'
+                }).catch(console.error);
+            } else {
+                await interaction.reply({
+                    content: '❌ An error occurred while processing your request.',
+                    flags: MessageFlags.Ephemeral
+                }).catch(console.error);
+            }
         }
     }
 });
@@ -2664,10 +2687,18 @@ client.on(Events.MessageCreate, async (message) => {
     
     // Dedup guard: skip if already processed by another instance
     if (isDuplicate(message.id)) return;
-    
+
     // Handle progress updates in the PROGRESS_CHANNEL_ID (including threads)
     const isProgressChannel = message.channel.id === PROGRESS_CHANNEL_ID || 
                               message.channel.parentId === PROGRESS_CHANNEL_ID;
+
+    // STRICT MAIN SERVER FILTER:
+    // In Main Server (COMMUNITY_SERVER_ID), ignore ALL channels EXCEPT the progress channel
+    const mainServerId = process.env.COMMUNITY_SERVER_ID || '1163002451746623528';
+    if (message.guild && message.guild.id === mainServerId && !isProgressChannel) {
+        return;
+    }
+
     if (isProgressChannel && !message.content.startsWith('!')) {
         // Check if message is in a thread
         if (message.channel.isThread()) {

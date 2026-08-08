@@ -29,6 +29,9 @@ CREATE TABLE IF NOT EXISTS progress_reminder_logs (
     discord_user_id TEXT NOT NULL,
     reminder_type TEXT NOT NULL,          -- 'first', 'second', 'inactive'
     reminder_date DATE NOT NULL,          -- YYYY-MM-DD in IST timezone
+    progress_submitted BOOLEAN DEFAULT false,
+    reminder_sent BOOLEAN DEFAULT true,
+    reminder_time TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(community_progress_channel_id, discord_user_id, reminder_type, reminder_date)
 );
@@ -41,6 +44,9 @@ ALTER TABLE progress_reminder_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE progress_reminder_logs ENABLE ROW LEVEL SECURITY;
 
 -- Allow bot access (all permissions for simplicity/anon key)
+DROP POLICY IF EXISTS "Enable all for anon" ON progress_reminder_config;
+DROP POLICY IF EXISTS "Enable all for anon" ON progress_reminder_logs;
+
 CREATE POLICY "Enable all for anon" ON progress_reminder_config FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Enable all for anon" ON progress_reminder_logs FOR ALL USING (true) WITH CHECK (true);
 

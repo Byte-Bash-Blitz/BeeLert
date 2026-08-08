@@ -70,7 +70,7 @@ function init(client, app, botStatus) {
 
     // 2. Register Web Dashboard Routes if Express app is present
     if (app) {
-        api.registerRoutes(app);
+        api.registerRoutes(app, client);
     }
 
     // 3. Register Event Listeners

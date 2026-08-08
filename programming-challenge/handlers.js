@@ -196,7 +196,8 @@ async function renderLeaderboard(filter = 'All Time') {
     for (let i = 0; i < top.length; i++) {
         const u = top[i];
         const badgeIcon = ranks[i] || `**#${i + 1}**`;
-        desc += `${badgeIcon} <@${u.userId}> — **${u.xp} XP** | Solved: ${u.solved} | Streak: 🔥${u.streak} | Acc: ${u.accuracy}%\n`;
+        const pointsStr = u.communityPoints ? ` | 💎 **${u.communityPoints} Pts**` : '';
+        desc += `${badgeIcon} <@${u.userId}> — ⭐ **${u.xp} XP**${pointsStr} | 🎯 Solved: **${u.solved}** | 🔥 Streak: **${u.streak}d** | 🎯 Acc: **${u.accuracy}%**\n`;
     }
 
     embed.setDescription(desc);

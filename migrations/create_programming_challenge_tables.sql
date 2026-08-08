@@ -53,3 +53,12 @@ CREATE TABLE IF NOT EXISTS challenge_submissions (
 
 -- Index for anti-cheat & similarity lookups
 CREATE INDEX IF NOT EXISTS idx_challenge_submissions_lookup ON challenge_submissions(challenge_id, is_correct);
+
+-- 4. Enable Row Level Security (RLS) & Policies for Web Dashboard and Bot access
+ALTER TABLE programming_challenges ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_programming_stats ENABLE ROW LEVEL SECURITY;
+ALTER TABLE challenge_submissions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Enable all for anon" ON programming_challenges FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Enable all for anon" ON user_programming_stats FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Enable all for anon" ON challenge_submissions FOR ALL USING (true) WITH CHECK (true);

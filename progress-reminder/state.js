@@ -102,6 +102,28 @@ const stateManager = {
             saveState(currentState);
             console.log(`✅ [Progress Reminder] Local cache marked user ${userId} as posted for channel ${channelId}.`);
         }
+
+        // Database sync for progress_updates
+        if (this.isDbConfigured()) {
+            try {
+                const todayStr = getTodayString();
+                const { error } = await supabase
+                    .from('progress_updates')
+                    .upsert({
+                        discord_user_id: userId,
+                        username: `User_${userId.slice(-4)}`,
+                        content: 'Daily Progress Submission',
+                        points_awarded: 5,
+                        update_date: todayStr
+                    }, { onConflict: 'discord_user_id,update_date' });
+
+                if (!error) {
+                    console.log(`✅ [Progress Reminder] Database marked user ${userId} as posted in progress_updates.`);
+                }
+            } catch (err) {
+                console.warn('⚠️ [Progress Reminder] Error upserting progress_updates:', err.message);
+            }
+        }
     },
     
     async getPostedMembersToday(channelId, trackedMembers) {
@@ -167,6 +189,16 @@ const stateManager = {
             const dayBefore = format(dayBeforeYesterdayDate);
 
             console.log(`🔍 [Progress Reminder] Checking consecutive inactivity for dates: ${yesterday} and ${dayBefore}`);
+
+            // Safety guard: If DB progress_updates table is unpopulated or has no historical records, avoid false positive alerts
+            const { count, error: countError } = await supabase
+                .from('progress_updates')
+                .select('*', { count: 'exact', head: true });
+
+            if (countError || !count || count === 0) {
+                console.warn('⚠️ [Progress Reminder] progress_updates table is empty or unpopulated. Skipping inactive alert to avoid false positives.');
+                return [];
+            }
 
             // Fetch progress update records for tracked members on both yesterday and dayBefore
             const { data, error } = await supabase

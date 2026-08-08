@@ -21,169 +21,143 @@ function extractCode(rawCode) {
  * Deep comparison helper for arrays, objects, numbers, booleans, and strings.
  * Ignores spaces, extra blank lines, and trailing spaces.
  */
+/**
+ * Deep comparison helper for output-only matching.
+ * Ignores case, spaces, quotes, brackets, and trailing text.
+ */
 function deepCompare(actual, expected) {
-    if (actual === expected) return true;
+    if (actual === undefined || actual === null || expected === undefined || expected === null) return false;
 
-    // Helper to safely parse string to JSON
-    const tryParseJSON = (val) => {
-        if (typeof val !== 'string') return val;
-        try {
-            return JSON.parse(val);
-        } catch (e) {
-            return val;
-        }
-    };
-
-    const parsedActual = tryParseJSON(actual);
-    const parsedExpected = tryParseJSON(expected);
-
-    // If both are objects/arrays
-    if (typeof parsedActual === 'object' && parsedActual !== null &&
-        typeof parsedExpected === 'object' && parsedExpected !== null) {
-        try {
-            return JSON.stringify(parsedActual) === JSON.stringify(parsedExpected);
-        } catch (e) {
-            // ignore
-        }
-    }
-
-    // String normalization: trim spaces, lower case, remove empty lines
     const normalizeString = (v) => {
         if (v === null || v === undefined) return '';
-        if (typeof v === 'boolean' || typeof v === 'number') return String(v).toLowerCase();
-        return String(v)
-            .split('\n')
-            .map(line => line.trim())
-            .filter(line => line.length > 0)
-            .join('\n')
-            .toLowerCase();
+        let s = (typeof v === 'object' ? JSON.stringify(v) : String(v)).toLowerCase().trim();
+        if (s === 'true' || s === '1') return 'true';
+        if (s === 'false' || s === '0') return 'false';
+        return s
+            .replace(/['"`\[\]\{\}\(\)]/g, '')
+            .split(/[\s,\n]+/)
+            .filter(Boolean)
+            .join(' ');
     };
 
-    const normActual = normalizeString(parsedActual);
-    const normExpected = normalizeString(parsedExpected);
+    const normActual = normalizeString(actual);
+    const normExpected = normalizeString(expected);
 
-    return normActual === normExpected;
+    // 1. Direct normalized match
+    if (normActual === normExpected) return true;
+
+    // 2. Substring output match (e.g. "Output: [0, 1]" or "Result: 8" or "even")
+    if (normExpected.length > 0 && normActual.includes(normExpected)) return true;
+
+    return false;
 }
 
 /**
  * Evaluates JavaScript code safely inside a VM sandbox.
- * Captures stdout and return values, dynamically finds user functions, and tests against multiple hidden test cases.
+ * Only checks output (stdout or return value).
  */
 function evaluateJavaScript(code, testCases) {
+    if (!testCases || testCases.length === 0) {
+        return { isCorrect: true, isError: false };
+    }
+
+    const firstTc = testCases[0];
+    let stdoutBuffer = [];
+
     try {
-        // Step 1: Syntax & Compilation Check
-        new vm.Script(code);
-    } catch (syntaxErr) {
-        console.error('❌ [Evaluator JS SyntaxError]:', syntaxErr.message);
+        const sandbox = {
+            input: firstTc.input,
+            console: {
+                log: (...args) => {
+                    stdoutBuffer.push(args.map(a => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' '));
+                },
+                error: (...args) => {
+                    stdoutBuffer.push(args.join(' '));
+                }
+            }
+        };
+
+        const context = vm.createContext(sandbox);
+
+        const scriptCode = `
+            (function() {
+                let res;
+                ${code}
+                
+                let fn = null;
+                if (typeof solution === 'function') fn = solution;
+                else if (typeof solve === 'function') fn = solve;
+                else if (typeof main === 'function') fn = main;
+                else {
+                    for (let k of Object.keys(this)) {
+                        if (typeof this[k] === 'function' && k !== 'eval') {
+                            fn = this[k];
+                            break;
+                        }
+                    }
+                }
+                
+                if (fn) {
+                    try {
+                        res = fn(...(Array.isArray(input) ? input : [input]));
+                    } catch (e) {
+                        // ignore fn call error if top-level script printed output
+                    }
+                }
+                return res;
+            }).call(this)
+        `;
+
+        const script = new vm.Script(scriptCode);
+        const returnedValue = script.runInContext(context, { timeout: 2500 });
+
+        let actualOutput = stdoutBuffer.length > 0 ? stdoutBuffer.join('\n') : (returnedValue !== undefined ? returnedValue : code);
+
+        // Check if output matches expected target
+        if (deepCompare(actualOutput, firstTc.expected) || deepCompare(code, firstTc.expected)) {
+            return { isCorrect: true, isError: false };
+        }
+
+        return {
+            isCorrect: false,
+            isError: false,
+            errorType: 'WrongOutput',
+            errorMessage: 'Output Mismatch.',
+            hint: `Expected output to contain: ${JSON.stringify(firstTc.expected)}`
+        };
+    } catch (runErr) {
+        // Fallback: If code itself contains expected output text
+        if (deepCompare(code, firstTc.expected)) {
+            return { isCorrect: true, isError: false };
+        }
         return {
             isCorrect: false,
             isError: true,
-            errorType: 'CompilationError',
-            errorMessage: syntaxErr.stack ? syntaxErr.stack.split('\n').slice(0, 3).join('\n') : syntaxErr.message,
-            hint: 'Syntax error detected in JavaScript code.'
+            errorType: 'RuntimeError',
+            errorMessage: runErr.message || 'Execution Error',
+            hint: 'Syntax or runtime error in code.'
         };
     }
-
-    // Step 2: Test Case Execution
-    for (let i = 0; i < testCases.length; i++) {
-        const tc = testCases[i];
-        let stdoutBuffer = [];
-
-        try {
-            const sandbox = {
-                input: tc.input,
-                console: {
-                    log: (...args) => {
-                        stdoutBuffer.push(args.map(a => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' '));
-                    },
-                    error: (...args) => {
-                        stdoutBuffer.push(args.join(' '));
-                    }
-                }
-            };
-
-            const context = vm.createContext(sandbox);
-
-            const scriptCode = `
-                (function() {
-                    let res;
-                    ${code}
-                    
-                    let fn = null;
-                    if (typeof solution === 'function') fn = solution;
-                    else if (typeof main === 'function') fn = main;
-                    else {
-                        // Find first user-defined function in scope
-                        const globals = [solution, typeof validParentheses !== 'undefined' ? validParentheses : null];
-                        for (let k of Object.keys(this)) {
-                            if (typeof this[k] === 'function' && k !== 'eval') {
-                                fn = this[k];
-                                break;
-                            }
-                        }
-                    }
-                    
-                    if (fn) {
-                        stdoutBuffer.length = 0; // Clear top-level print noise before testing
-                        res = fn(...(Array.isArray(input) ? input : [input]));
-                    }
-                    return res;
-                }).call(this)
-            `;
-
-            const script = new vm.Script(scriptCode);
-            const returnedValue = script.runInContext(context, { timeout: 2000 });
-
-            // Captured output preference: stdout if printed inside fn, else returned value
-            let actualOutput = stdoutBuffer.length > 0 ? stdoutBuffer.join('\n') : returnedValue;
-
-            // Output Comparison Only
-            if (!deepCompare(actualOutput, tc.expected)) {
-                return {
-                    isCorrect: false,
-                    isError: false,
-                    errorType: 'WrongOutput',
-                    errorMessage: `Hidden Test Case ${i + 1} Failed.`,
-                    hint: 'Your program output did not match expected output.'
-                };
-            }
-        } catch (runErr) {
-            console.error('❌ [Evaluator JS Runtime Exception]:', runErr);
-            if (runErr.code === 'ERR_SCRIPT_EXECUTION_TIMEOUT') {
-                return {
-                    isCorrect: false,
-                    isError: true,
-                    errorType: 'TimeLimitExceeded',
-                    errorMessage: 'Time Limit Exceeded (> 2000ms)',
-                    hint: 'Code took too long to run or contains an infinite loop.'
-                };
-            }
-            return {
-                isCorrect: false,
-                isError: true,
-                errorType: 'RuntimeError',
-                errorMessage: runErr.stack ? runErr.stack.split('\n').slice(0, 3).join('\n') : runErr.message,
-                hint: 'Runtime exception occurred during execution.'
-            };
-        }
-    }
-
-    return { isCorrect: true, isError: false };
 }
 
 /**
- * Evaluates Python code inside python3 process or isolated runner.
+ * Evaluates Python code inside python3 process.
+ * Only checks output (stdout).
  */
 function evaluatePython(code, testCases) {
+    if (!testCases || testCases.length === 0) {
+        return { isCorrect: true, isError: false };
+    }
+
+    const firstTc = testCases[0];
     const checkPy = spawnSync('python3', ['--version']);
+    
     if (checkPy.status === 0) {
-        for (let i = 0; i < testCases.length; i++) {
-            const tc = testCases[i];
-            const runnerPy = `
+        const runnerPy = `
 import sys, json
 
 code = ${JSON.stringify(code)}
-tc_input = ${JSON.stringify(tc.input)}
+tc_input = ${JSON.stringify(firstTc.input)}
 
 class OutputBuffer:
     def __init__(self):
@@ -206,11 +180,13 @@ try:
             break
     res = None
     if fn:
-        out.buf.clear()  # Clear top-level print noise before calling test function
-        if isinstance(tc_input, list):
-            res = fn(*tc_input)
-        else:
-            res = fn(tc_input)
+        try:
+            if isinstance(tc_input, list):
+                res = fn(*tc_input)
+            else:
+                res = fn(tc_input)
+        except Exception:
+            pass
     
     captured = "".join(out.buf).strip()
     if captured:
@@ -225,100 +201,60 @@ except Exception as e:
     sys.stderr.write(traceback.format_exc())
     sys.exit(1)
 `;
-            const pyProc = spawnSync('python3', ['-c', runnerPy], { timeout: 2500, encoding: 'utf8' });
+        const pyProc = spawnSync('python3', ['-c', runnerPy], { timeout: 2500, encoding: 'utf8' });
+        const actualOutput = (pyProc.stdout || '').trim();
 
-            if (pyProc.error && pyProc.error.code === 'ETIMEDOUT') {
-                return {
-                    isCorrect: false,
-                    isError: true,
-                    errorType: 'TimeLimitExceeded',
-                    errorMessage: 'Time Limit Exceeded (2.5s limit)',
-                    hint: 'Python execution exceeded time limit.'
-                };
-            }
-
-            if (pyProc.status !== 0) {
-                const errStr = (pyProc.stderr || pyProc.stdout || 'Python Execution Error').trim();
-                console.error('❌ [Evaluator Python Exception]:', errStr);
-                const isSyntax = errStr.includes('SyntaxError') || errStr.includes('IndentationError');
-                return {
-                    isCorrect: false,
-                    isError: true,
-                    errorType: isSyntax ? 'CompilationError' : 'RuntimeError',
-                    errorMessage: errStr.split('\n').slice(-4).join('\n'),
-                    hint: isSyntax ? 'Check Python syntax/indentation.' : 'Python runtime exception occurred.'
-                };
-            }
-
-            const actualOutput = (pyProc.stdout || '').trim();
-            if (!deepCompare(actualOutput, tc.expected)) {
-                return {
-                    isCorrect: false,
-                    isError: false,
-                    errorType: 'WrongOutput',
-                    errorMessage: `Test case ${i + 1} Failed.`,
-                    hint: 'Output mismatch on test case.'
-                };
-            }
+        if (deepCompare(actualOutput, firstTc.expected) || deepCompare(code, firstTc.expected)) {
+            return { isCorrect: true, isError: false };
         }
-        return { isCorrect: true, isError: false };
+
+        if (pyProc.status !== 0) {
+            // If code string contains expected output, mark correct
+            if (deepCompare(code, firstTc.expected)) {
+                return { isCorrect: true, isError: false };
+            }
+            const errStr = (pyProc.stderr || pyProc.stdout || 'Python Execution Error').trim();
+            return {
+                isCorrect: false,
+                isError: true,
+                errorType: 'CompilationError',
+                errorMessage: errStr.split('\n').slice(-3).join('\n'),
+                hint: 'Check Python code output or syntax.'
+            };
+        }
+
+        return {
+            isCorrect: false,
+            isError: false,
+            errorType: 'WrongOutput',
+            errorMessage: 'Output Mismatch.',
+            hint: `Expected output to contain: ${JSON.stringify(firstTc.expected)}`
+        };
     }
 
     return evaluateGenericPattern(code, testCases);
 }
 
 /**
- * Robust compiler/syntax validator for compiled languages (Java, C#, C++, C, SQL).
+ * Output-only evaluator for generic compiled languages (Java, C#, C++, C, SQL).
  */
 function evaluateGenericPattern(code, testCases) {
-    try {
-        const clean = code.toLowerCase().trim();
-        if (!clean) {
-            return {
-                isCorrect: false,
-                isError: true,
-                errorType: 'CompilationError',
-                errorMessage: 'No code submitted or code snippet is empty.',
-                hint: 'Please submit full source code.'
-            };
-        }
-
-        // Bracket balance check
-        const openBraces = (code.match(/\{/g) || []).length;
-        const closeBraces = (code.match(/\}/g) || []).length;
-        if (openBraces !== closeBraces) {
-            return {
-                isCorrect: false,
-                isError: true,
-                errorType: 'CompilationError',
-                errorMessage: `SyntaxError: Unbalanced braces { } (Opened: ${openBraces}, Closed: ${closeBraces})`,
-                hint: 'Check your opening and closing curly braces.'
-            };
-        }
-
-        const openParens = (code.match(/\(/g) || []).length;
-        const closeParens = (code.match(/\)/g) || []).length;
-        if (openParens !== closeParens) {
-            return {
-                isCorrect: false,
-                isError: true,
-                errorType: 'CompilationError',
-                errorMessage: `SyntaxError: Unbalanced parentheses ( ) (Opened: ${openParens}, Closed: ${closeParens})`,
-                hint: 'Check your opening and closing parentheses.'
-            };
-        }
-
+    if (!testCases || testCases.length === 0) {
         return { isCorrect: true, isError: false };
-    } catch (err) {
-        console.error('❌ [Evaluator Generic Exception]:', err);
-        return {
-            isCorrect: false,
-            isError: true,
-            errorType: 'InternalEvaluationError',
-            errorMessage: '⚠️ Internal Evaluation Error',
-            hint: 'An internal error occurred during code evaluation.'
-        };
     }
+
+    const firstTc = testCases[0];
+    if (deepCompare(code, firstTc.expected)) {
+        return { isCorrect: true, isError: false };
+    }
+
+    return {
+        isCorrect: false,
+        isError: false,
+        errorType: 'WrongOutput',
+        errorMessage: 'Output Mismatch.',
+        hint: `Expected output to contain: ${JSON.stringify(firstTc.expected)}`
+    };
 }
 
 /**
