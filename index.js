@@ -957,10 +957,6 @@ function scheduleMessageDeletion(message) {
 }
 
 // Express API endpoints
-app.get('/', (req, res) => {
-    res.redirect('/dashboard');
-});
-
 app.get('/ping', (req, res) => {
     res.status(200).send('PONG');
 });
@@ -969,44 +965,18 @@ app.get('/health', (req, res) => {
     res.status(200).json({
         status: 'OK',
         botOnline: botStatus.isOnline,
+        uptime: botStatus.connectedAt ? Math.floor((Date.now() - new Date(botStatus.connectedAt)) / 1000) : 0,
         timestamp: new Date().toISOString()
     });
 });
 
 app.get('/', (req, res) => {
-    res.send(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>BeeLert Bot Web Services</title>
-            <style>
-                body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #fff; text-align: center; padding: 50px 20px; }
-                h1 { color: #00f0ff; font-size: 32px; }
-                .card { background: #1e293b; padding: 24px; border-radius: 16px; margin: 20px auto; max-width: 520px; display: block; color: #fff; text-decoration: none; border: 1px solid #334155; transition: border-color 0.2s; }
-                .card:hover { border-color: #00f0ff; }
-                .card h2 { margin-top: 0; color: #38bdf8; }
-                .badge { background: #22c55e; color: #fff; padding: 6px 16px; border-radius: 20px; font-weight: bold; display: inline-block; margin-bottom: 20px; }
-            </style>
-        </head>
-        <body>
-            <h1>🤖 BeeLert Web Services Active</h1>
-            <div><span class="badge">Status: ${botStatus.isOnline ? 'ONLINE 🟢' : 'INITIALIZING 🟡'}</span></div>
-            <a href="/programming-dashboard" class="card">
-                <h2>🔥 Programming Challenge Dashboard</h2>
-                <p>View active daily challenges, global leaderboard, problem bank, and developer stats.</p>
-            </a>
-            <a href="/dashboard" class="card">
-                <h2>📊 Progress Reminder Dashboard</h2>
-                <p>View daily progress tracking, server configs, and reminder dispatch logs.</p>
-            </a>
-        </body>
-        </html>
-    `);
+    res.redirect('/dashboard');
 });
 
 app.get('/status', (req, res) => {
-    const statusCode = botStatus.isOnline ? 200 : 503;
-    res.status(statusCode).json({
+    res.status(200).json({
+        status: 'OK',
         botOnline: botStatus.isOnline,
         connectedAt: botStatus.connectedAt,
         lastMessageSent: botStatus.lastMessageSent,
