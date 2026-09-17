@@ -4205,28 +4205,57 @@ client.on('error', error => {
     console.error('🔍 [CLIENT ERROR]', error.message);
 });
 
+client.on('shardError', (error, shardId) => {
+    console.error(`❌ [SHARD ERROR ${shardId}]`, error.message);
+});
+
+client.on('shardDisconnect', (event, shardId) => {
+    console.warn(`⚠️ [SHARD DISCONNECT ${shardId}] Code: ${event.code}, Reason: ${event.reason || 'None'}`);
+    if (event.code === 4014) {
+        console.error('💥 CRITICAL DISCORD ERROR 4014: Disallowed Intent(s)!');
+        console.error('👉 You MUST enable "MESSAGE CONTENT INTENT" & "SERVER MEMBERS INTENT" in Discord Developer Portal!');
+        console.error('   Visit: https://discord.com/developers/applications -> Bot -> Privileged Gateway Intents');
+    }
+});
+
 client.rest.on('rateLimited', (info) => {
     console.warn('⚠️ [RATE LIMITED]', info);
 });
 
-// Add timeout to detect if login hangs (90 seconds for slow Render cold starts)
-const loginTimeout = setTimeout(() => {
-    console.error('❌ Discord login timeout - bot did not connect within 90 seconds');
-    console.error('Token length:', BOT_TOKEN.length);
-    console.error('Token prefix:', BOT_TOKEN.substring(0, 10) + '...');
-    process.exit(1);
-}, 90000); // 90 second timeout
+async function connectToDiscord(maxRetries = 3) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            console.log(`🔐 Attempting Discord login (Attempt ${attempt}/${maxRetries})...`);
+            
+            let timerId;
+            const loginPromise = client.login(BOT_TOKEN);
+            const timeoutPromise = new Promise((_, reject) => {
+                timerId = setTimeout(() => reject(new Error('Discord login connection timed out (90s)')), 90000);
+            });
 
-client.login(BOT_TOKEN)
-    .then(() => {
-        clearTimeout(loginTimeout);
-        console.log('✅ Discord login successful');
-    })
-    .catch(error => {
-        clearTimeout(loginTimeout);
-        console.error('❌ Failed to login to Discord:', error.message);
-        console.error('Error code:', error.code);
-        console.error('Error details:', error);
-        console.error('Token present:', BOT_TOKEN ? 'Yes (length: ' + BOT_TOKEN.length + ')' : 'No');
-        process.exit(1);
-    });
+            await Promise.race([loginPromise, timeoutPromise]);
+            clearTimeout(timerId);
+            console.log('✅ Discord login successful');
+            return true;
+        } catch (error) {
+            console.error(`❌ Discord login attempt ${attempt} failed:`, error.message);
+            if (error.code) console.error('   Error Code:', error.code);
+
+            if (error.message.includes('TOKEN_INVALID') || error.message.includes('An invalid token was provided')) {
+                console.error('💥 CRITICAL: BOT_TOKEN is invalid! Please check your BOT_TOKEN in environment variables.');
+                break;
+            }
+
+            if (attempt < maxRetries) {
+                const delayMs = attempt * 5000;
+                console.log(`⏳ Retrying Discord connection in ${delayMs / 1000}s...`);
+                await new Promise(res => setTimeout(res, delayMs));
+            }
+        }
+    }
+
+    console.error('❌ All Discord login attempts failed. Exiting process so container can restart.');
+    process.exit(1);
+}
+
+connectToDiscord();
