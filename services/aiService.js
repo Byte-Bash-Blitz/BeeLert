@@ -2,8 +2,34 @@
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
-// Default model - you can change this to any OpenRouter supported model
-const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || 'google/gemini-2.5-flash';
+// Default model - free OpenRouter auto-router
+const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || 'openrouter/free';
+
+// Active free fallback models
+const FALLBACK_FREE_MODELS = [
+    DEFAULT_MODEL,
+    'openrouter/free',
+    'liquid/lfm-2.5-2.6b:free',
+    'nvidia/nemotron-3.5-lightning:free',
+    'nex-agi/nex-n2.5-pro:free'
+];
+
+// Track models that are unavailable/discontinued so we never retry them repeatedly
+const unavailableModels = new Set();
+
+// Throttled logging to avoid spamming the terminal with duplicate errors every second
+let lastLoggedError = null;
+let lastLoggedErrorTime = 0;
+
+function logOpenRouterError(context, errorMessage) {
+    const now = Date.now();
+    const key = `${context}:${errorMessage}`;
+    if (key !== lastLoggedError || now - lastLoggedErrorTime > 30000) {
+        console.error(`❌ [OpenRouter] ${context}: ${errorMessage}`);
+        lastLoggedError = key;
+        lastLoggedErrorTime = now;
+    }
+}
 
 let isConfigured = false;
 
@@ -15,67 +41,110 @@ if (OPENROUTER_API_KEY) {
 }
 
 /**
- * Make a request to OpenRouter API with dynamic token reduction & fallback models
+ * Make a request to OpenRouter API with dynamic fallback models and safe retry handling
  * @param {Array} messages - Array of message objects [{role, content}]
  * @param {number} maxTokens - Maximum tokens in response
  * @returns {Promise<string>} - AI response text
  */
 async function makeOpenRouterRequest(messages, maxTokens = 500) {
-    const modelsToTry = [
-        DEFAULT_MODEL,
-        'google/gemini-2.5-flash:free',
-        'meta-llama/llama-3.3-70b-instruct:free',
-        'deepseek/deepseek-r1:free'
-    ];
+    if (!OPENROUTER_API_KEY) {
+        throw new Error('OpenRouter API key is not configured');
+    }
 
-    const uniqueModels = [...new Set(modelsToTry.filter(Boolean))];
+    // Filter candidate models, skipping any known unavailable models
+    let candidateModels = [...new Set(FALLBACK_FREE_MODELS.filter(Boolean))]
+        .filter(m => !unavailableModels.has(m));
+
+    if (candidateModels.length === 0) {
+        unavailableModels.clear();
+        candidateModels = ['openrouter/free'];
+    }
+
     let lastError = null;
 
-    for (const model of uniqueModels) {
-        // Try requested maxTokens, fallback to smaller token limits if credit/max_tokens error
-        const tokenLimits = [Math.min(maxTokens, 500), 300, 150];
+    for (const model of candidateModels) {
+        const tokenLimits = maxTokens > 300 ? [Math.min(maxTokens, 500), 300] : [maxTokens];
 
         for (const limit of tokenLimits) {
-            try {
-                const response = await fetch(OPENROUTER_BASE_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-                        'Content-Type': 'application/json',
-                        'HTTP-Referer': 'https://github.com/Lethinkj/BeeLert',
-                        'X-Title': 'BeeLert Discord Bot'
-                    },
-                    body: JSON.stringify({
-                        model: model,
-                        messages: messages,
-                        max_tokens: limit,
-                        temperature: 0.7
-                    })
-                });
+            let attempt = 0;
+            const maxAttempts = 2; // Maximum 2 attempts per model only for transient network/rate limit issues
 
-                const data = await response.json().catch(() => ({}));
+            while (attempt < maxAttempts) {
+                attempt++;
+                try {
+                    const response = await fetch(OPENROUTER_BASE_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+                            'Content-Type': 'application/json',
+                            'HTTP-Referer': 'https://github.com/Byte-Bash-Blitz/BeeLert',
+                            'X-Title': 'BeeLert Discord Bot'
+                        },
+                        body: JSON.stringify({
+                            model: model,
+                            messages: messages,
+                            max_tokens: limit,
+                            temperature: 0.7
+                        })
+                    });
 
-                if (!response.ok) {
-                    const errMsg = data.error?.message || `HTTP ${response.status}`;
-                    lastError = new Error(errMsg);
-                    lastError.status = response.status;
-                    
-                    if (errMsg.includes('max_tokens') || errMsg.includes('credits')) {
-                        continue; // try next lower token limit
+                    const data = await response.json().catch(() => ({}));
+
+                    if (!response.ok) {
+                        const errMsg = data.error?.message || `HTTP ${response.status}`;
+                        lastError = new Error(errMsg);
+                        lastError.status = response.status;
+
+                        // Check if model is unavailable / discontinued
+                        const isUnavailable = response.status === 404 ||
+                            errMsg.includes('unavailable for free') ||
+                            errMsg.includes('slug instead') ||
+                            errMsg.includes('not found') ||
+                            errMsg.includes('does not exist');
+
+                        if (isUnavailable) {
+                            unavailableModels.add(model);
+                            logOpenRouterError('Model Unavailable', `${model} is unavailable (${errMsg}). Switching to fallback.`);
+                            break; // Skip directly to next model
+                        }
+
+                        // Transient rate limits (429) or provider failures (5xx): back off and retry once
+                        const isTransient = response.status === 429 || (response.status >= 500 && response.status < 600);
+                        if (isTransient && attempt < maxAttempts) {
+                            await new Promise(res => setTimeout(res, 1000));
+                            continue;
+                        }
+
+                        // Token limit or context length issue: break to try next token limit
+                        if (errMsg.includes('max_tokens') || errMsg.includes('context_length')) {
+                            break;
+                        }
+
+                        // Other permanent error: break to next model
+                        break;
                     }
-                    break; // try next model
-                }
 
-                const content = data.choices?.[0]?.message?.content;
-                if (content) {
-                    return content;
+                    const content = data.choices?.[0]?.message?.content;
+                    if (content) {
+                        return content;
+                    }
+                } catch (err) {
+                    lastError = err;
+                    if (attempt < maxAttempts) {
+                        await new Promise(res => setTimeout(res, 500));
+                        continue;
+                    }
                 }
-            } catch (err) {
-                lastError = err;
+                break;
+            }
+
+            if (unavailableModels.has(model)) {
+                break;
             }
         }
     }
 
+    logOpenRouterError('All Models Failed', lastError ? lastError.message : 'No response from OpenRouter');
     throw lastError || new Error('Failed to get response from OpenRouter AI');
 }
 
@@ -96,7 +165,7 @@ async function askQuestion(question) {
         
         return await makeOpenRouterRequest(messages);
     } catch (error) {
-        console.error('❌ Error asking OpenRouter:', error.message);
+        logOpenRouterError('askQuestion', error.message);
         
         if (error.status === 401 || error.message.includes('API_KEY')) {
             return "❌ **OpenRouter API Error**: The API key is invalid.\n\n**To fix:**\n1. Get a new API key from OpenRouter.ai\n2. Update `OPENROUTER_API_KEY` in your `.env` file\n3. Restart the bot";
@@ -134,7 +203,7 @@ async function generateMotivation() {
         const response = await makeOpenRouterRequest(messages, 100);
         return response.trim();
     } catch (error) {
-        console.error('❌ Error generating AI motivation:', error.message);
+        logOpenRouterError('generateMotivation', error.message);
         return null; // Return null to use fallback quotes
     }
 }
@@ -173,7 +242,7 @@ async function askWithHistory(question, history = [], systemPrompt = '') {
         
         return await makeOpenRouterRequest(messages, 2000);
     } catch (error) {
-        console.error('❌ Error in OpenRouter with history:', error.message);
+        logOpenRouterError('askWithHistory', error.message);
         
         if (error.status === 429 || error.message.includes('429')) {
             return "⏳ Too many requests. Please wait a moment and try again.";
@@ -205,7 +274,7 @@ async function askWithContext(question, context = '') {
         
         return await makeOpenRouterRequest(messages, 500);
     } catch (error) {
-        console.error('❌ Error in contextual AI query:', error.message);
+        logOpenRouterError('askWithContext', error.message);
         return "Sorry, I encountered an error. Please try again.";
     }
 }
@@ -278,7 +347,7 @@ Rules:
         
         return feedback;
     } catch (error) {
-        console.error('❌ Error verifying progress update:', error.message);
+        logOpenRouterError('verifyProgressUpdate', error.message);
         return {
             isValid: true,
             clarityTip: "Keep up the great work!",

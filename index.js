@@ -3772,7 +3772,7 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
         const oldChannel = oldState.channel;
         const newChannel = newState.channel;
 
-        // Daily Voice Activity Monitoring (Silent, VC 1497644357870682324)
+        // Daily Voice Activity Monitoring (Silent, 4 Clan VCs)
         await voiceMonitor.handleVoiceStateUpdate(oldState, newState);
         
         // Check for active scheduled meetings first

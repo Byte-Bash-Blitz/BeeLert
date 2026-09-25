@@ -5,6 +5,7 @@ const config = require('./config');
 
 const LOCAL_SESSIONS_FILE = path.join(__dirname, '..', 'voice-monitor-sessions.json');
 const LOCAL_REPORTS_FILE = path.join(__dirname, '..', 'voice-monitor-reports.json');
+const LOCAL_ACTIVE_FILE = path.join(__dirname, '..', 'voice-monitor-active.json');
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
@@ -43,6 +44,30 @@ function saveLocalJson(filePath, data) {
 }
 
 /**
+ * Save active sessions to persistent file for bot restart safety
+ */
+function saveActiveSessions(activeMap) {
+    const arr = Array.from(activeMap.values());
+    saveLocalJson(LOCAL_ACTIVE_FILE, arr);
+}
+
+/**
+ * Load active sessions from persistent file
+ */
+function loadActiveSessions() {
+    return loadLocalJson(LOCAL_ACTIVE_FILE, []);
+}
+
+/**
+ * Remove an active session for a user
+ */
+function removeActiveSession(userId) {
+    const list = loadLocalJson(LOCAL_ACTIVE_FILE, []);
+    const filtered = list.filter(s => s.discordUserId !== userId);
+    saveLocalJson(LOCAL_ACTIVE_FILE, filtered);
+}
+
+/**
  * Save a completed or updated voice session.
  */
 async function saveVoiceSession(sessionData) {
@@ -50,6 +75,8 @@ async function saveVoiceSession(sessionData) {
         sessionId,
         discordUserId,
         username,
+        displayName,
+        clanName,
         guildId,
         voiceChannelId,
         joinTime,
@@ -58,13 +85,19 @@ async function saveVoiceSession(sessionData) {
         sessionDate
     } = sessionData;
 
+    const resolvedClan = clanName || (config.getClanByChannelId(voiceChannelId)?.name) || 'UNKNOWN';
+    const resolvedDisplayName = displayName || username || `user_${discordUserId}`;
+    const resolvedUsername = username || resolvedDisplayName;
+
     // 1. Local Backup Storage
     const local = loadLocalJson(LOCAL_SESSIONS_FILE, []);
     const idx = local.findIndex(s => s.sessionId === sessionId);
     const sessionObj = {
         sessionId,
         discordUserId,
-        username,
+        username: resolvedUsername,
+        displayName: resolvedDisplayName,
+        clanName: resolvedClan,
         guildId,
         voiceChannelId,
         joinTime: new Date(joinTime).toISOString(),
@@ -83,19 +116,34 @@ async function saveVoiceSession(sessionData) {
     // 2. Supabase Storage (if connected)
     if (isSupabaseReady) {
         try {
-            const { error } = await supabase
+            const basePayload = {
+                session_id: sessionId,
+                discord_user_id: discordUserId,
+                username: resolvedUsername,
+                guild_id: guildId,
+                voice_channel_id: voiceChannelId,
+                join_time: new Date(joinTime).toISOString(),
+                leave_time: leaveTime ? new Date(leaveTime).toISOString() : null,
+                duration_seconds: durationSeconds || 0,
+                session_date: sessionDate
+            };
+
+            // Attempt upsert with clan_name and display_name if columns exist
+            let { error } = await supabase
                 .from('daily_voice_monitor_sessions')
                 .upsert({
-                    session_id: sessionId,
-                    discord_user_id: discordUserId,
-                    username: username,
-                    guild_id: guildId,
-                    voice_channel_id: voiceChannelId,
-                    join_time: new Date(joinTime).toISOString(),
-                    leave_time: leaveTime ? new Date(leaveTime).toISOString() : null,
-                    duration_seconds: durationSeconds || 0,
-                    session_date: sessionDate
+                    ...basePayload,
+                    display_name: resolvedDisplayName,
+                    clan_name: resolvedClan
                 }, { onConflict: 'session_id' });
+
+            if (error && (error.message.includes('column') || error.code === 'PGRST204')) {
+                // Retry without optional columns if Supabase schema has not been migrated
+                const retry = await supabase
+                    .from('daily_voice_monitor_sessions')
+                    .upsert(basePayload, { onConflict: 'session_id' });
+                error = retry.error;
+            }
 
             if (error) {
                 console.warn('⚠️ [Voice Monitor DB] Supabase upsert session error:', error.message);
@@ -124,6 +172,8 @@ async function getSessionsForDate(dateStr) {
                     sessionId: s.session_id,
                     discordUserId: s.discord_user_id,
                     username: s.username,
+                    displayName: s.display_name || s.username || `user_${s.discord_user_id}`,
+                    clanName: s.clan_name || (config.getClanByChannelId(s.voice_channel_id)?.name) || 'UNKNOWN',
                     guildId: s.guild_id,
                     voiceChannelId: s.voice_channel_id,
                     joinTime: s.join_time,
@@ -138,7 +188,13 @@ async function getSessionsForDate(dateStr) {
     }
 
     const local = loadLocalJson(LOCAL_SESSIONS_FILE, []);
-    return local.filter(s => s.sessionDate === dateStr);
+    return local
+        .filter(s => s.sessionDate === dateStr)
+        .map(s => ({
+            ...s,
+            displayName: s.displayName || s.username || `user_${s.discordUserId}`,
+            clanName: s.clanName || (config.getClanByChannelId(s.voiceChannelId)?.name) || 'UNKNOWN'
+        }));
 }
 
 /**
@@ -195,5 +251,8 @@ module.exports = {
     saveVoiceSession,
     getSessionsForDate,
     hasReportBeenSent,
-    markReportSent
+    markReportSent,
+    saveActiveSessions,
+    loadActiveSessions,
+    removeActiveSession
 };

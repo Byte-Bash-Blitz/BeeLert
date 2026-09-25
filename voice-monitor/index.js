@@ -12,7 +12,7 @@ function init(client) {
         // Register 11 PM cron scheduler
         scheduler.startScheduler(client);
 
-        console.log(`✅ [Voice Monitor Plugin] Fully initialized. Monitoring VC ${config.MONITORED_VC_ID}...`);
+        console.log(`✅ [Voice Monitor Plugin] Fully initialized. Monitoring 4 Clan VCs: ${Object.keys(config.CLAN_VOICE_CHANNELS).join(', ')}...`);
     } catch (err) {
         console.error('❌ [Voice Monitor Plugin] Initialization error:', err);
     }

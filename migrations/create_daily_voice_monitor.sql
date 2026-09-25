@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS daily_voice_monitor_sessions (
     session_id TEXT NOT NULL UNIQUE,
     discord_user_id TEXT NOT NULL,
     username TEXT NOT NULL,
+    display_name TEXT,
+    clan_name TEXT,
     guild_id TEXT NOT NULL,
     voice_channel_id TEXT NOT NULL,
     join_time TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -17,9 +19,14 @@ CREATE TABLE IF NOT EXISTS daily_voice_monitor_sessions (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Safe migrations for existing databases
+ALTER TABLE daily_voice_monitor_sessions ADD COLUMN IF NOT EXISTS display_name TEXT;
+ALTER TABLE daily_voice_monitor_sessions ADD COLUMN IF NOT EXISTS clan_name TEXT;
+
 CREATE INDEX IF NOT EXISTS idx_voice_mon_user_date ON daily_voice_monitor_sessions(discord_user_id, session_date);
 CREATE INDEX IF NOT EXISTS idx_voice_mon_date ON daily_voice_monitor_sessions(session_date);
 CREATE INDEX IF NOT EXISTS idx_voice_mon_channel ON daily_voice_monitor_sessions(voice_channel_id);
+CREATE INDEX IF NOT EXISTS idx_voice_mon_clan ON daily_voice_monitor_sessions(clan_name);
 
 -- Report Dedup Logs table
 CREATE TABLE IF NOT EXISTS daily_voice_report_logs (

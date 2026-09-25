@@ -35,3 +35,6 @@ env/
 user-reminders.json
 voice-monitor-sessions.json
 voice-monitor-reports.json
+voice-monitor-active.json
+test_clan_voice_system.js
+test_openrouter_fix.js
