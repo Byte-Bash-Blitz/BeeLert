@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — BeeLert Discord Bot</title>
+  <meta name="description" content="Privacy Policy for BeeLert Discord Bot. Explaining transparent data collection, storage in Supabase, retention, and deletion rights." />
+  <style>
+    :root {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-card: #182234;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent: #5865f2;
+      --accent-hover: #4752c4;
+      --border: #334155;
+      --success: #10b981;
+      --warning: #f59e0b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.7;
+      padding: 0;
+      margin: 0;
+    }
+
+    header {
+      background-color: rgba(15, 23, 42, 0.9);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 1rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      text-decoration: none;
+    }
+
+    .brand-badge {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 800;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    nav {
+      display: flex;
+      gap: 1rem;
+    }
+
+    nav a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.925rem;
+      font-weight: 500;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+    }
+
+    nav a:hover, nav a.active {
+      color: var(--text-primary);
+      background-color: var(--bg-secondary);
+    }
+
+    main {
+      max-width: 900px;
+      margin: 2.5rem auto 4rem;
+      padding: 0 1.5rem;
+    }
+
+    .doc-hero {
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1.5rem;
+    }
+
+    .doc-hero h1 {
+      font-size: 2.25rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.5px;
+    }
+
+    .meta {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    article section {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.75rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    }
+
+    h2 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #38bdf8;
+      margin-bottom: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    p {
+      color: var(--text-secondary);
+      margin-bottom: 1rem;
+    }
+
+    p:last-child {
+      margin-bottom: 0;
+    }
+
+    ul, ol {
+      color: var(--text-secondary);
+      padding-left: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    li {
+      margin-bottom: 0.5rem;
+    }
+
+    strong {
+      color: var(--text-primary);
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.9rem;
+    }
+
+    .data-table th, .data-table td {
+      border: 1px solid var(--border);
+      padding: 0.75rem 1rem;
+      text-align: left;
+    }
+
+    .data-table th {
+      background-color: var(--bg-secondary);
+      color: var(--text-primary);
+    }
+
+    .data-table td {
+      color: var(--text-secondary);
+    }
+
+    .card-alert {
+      background-color: rgba(16, 185, 129, 0.1);
+      border-left: 4px solid var(--success);
+      padding: 1rem 1.25rem;
+      border-radius: 0 8px 8px 0;
+      margin: 1rem 0;
+      color: #d1fae5;
+    }
+
+    .contact-card {
+      background: linear-gradient(135deg, rgba(88, 101, 242, 0.1), rgba(16, 185, 129, 0.05));
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 1.5rem;
+      border-radius: 12px;
+      margin-top: 2rem;
+    }
+
+    footer {
+      border-top: 1px solid var(--border);
+      background-color: var(--bg-primary);
+      padding: 2.5rem 1.5rem;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      text-align: center;
+    }
+
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .footer-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+    }
+
+    .footer-links a:hover {
+      color: var(--accent);
+    }
+
+    @media (max-width: 640px) {
+      .header-container {
+        flex-direction: column;
+        gap: 0.75rem;
+        align-items: flex-start;
+      }
+      .doc-hero h1 {
+        font-size: 1.75rem;
+      }
+      article section {
+        padding: 1.25rem;
+      }
+      .data-table {
+        font-size: 0.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-container">
+      <a href="/dashboard/" class="brand">
+        <span>🐝 BeeLert</span>
+        <span class="brand-badge">PRIVACY</span>
+      </a>
+      <nav>
+        <a href="/dashboard/">Dashboard</a>
+        <a href="/terms">Terms of Service</a>
+        <a href="/privacy" class="active">Privacy Policy</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="doc-hero">
+      <h1>Privacy Policy</h1>
+      <div class="meta">
+        <span><strong>Application:</strong> BeeLert (ID: 1438185938843996270)</span>
+        <span><strong>Effective Date:</strong> September 28, 2026</span>
+        <span><strong>Last Updated:</strong> September 28, 2026</span>
+      </div>
+    </div>
+
+    <article>
+      <section>
+        <h2>1. Introduction & Overview</h2>
+        <p>
+          At <strong>BeeLert</strong>, developed and operated by the <strong>Byte-Bash-Blitz</strong> team, we are committed to respecting and protecting user privacy. This Privacy Policy outlines what information we collect, how that information is used and stored, who it is shared with, and your rights regarding your data.
+        </p>
+        <p>
+          BeeLert strictly collects only the minimal data necessary to fulfill its explicit server utility features (voice activity monitoring, daily progress reminders, and programming challenges).
+        </p>
+      </section>
+
+      <section>
+        <h2>2. Information We Collect</h2>
+        <p>
+          When you use BeeLert or participate in a Discord server where BeeLert is active, we may process and store the following data:
+        </p>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Data Category</th>
+              <th>Specific Items Collected</th>
+              <th>Purpose</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>User Identity</strong></td>
+              <td>Discord User ID (Snowflake), Username, Display Name</td>
+              <td>Attributing voice session time, leaderboard scores, and sending scheduled progress reminders.</td>
+            </tr>
+            <tr>
+              <td><strong>Server & Channel Context</strong></td>
+              <td>Guild ID, Channel ID, Role IDs</td>
+              <td>Routing daily clan reports, challenge announcements, and reminder notifications to the correct server channels.</td>
+            </tr>
+            <tr>
+              <td><strong>Voice Activity Metadata</strong></td>
+              <td>Channel ID, join timestamp, leave timestamp, calculated duration (seconds/minutes) in the 4 monitored clan voice channels (AURA, BELMONT, LUMINA, SHADASTRIA).</td>
+              <td>Compiling the daily 11:00 PM IST 4-clan voice activity summary report.</td>
+            </tr>
+            <tr>
+              <td><strong>Progress & Inactivity Data</strong></td>
+              <td>User ID, check-in completion date, streak counts, reminder configuration.</td>
+              <td>Managing daily accountability check-ins and inactivity alerts.</td>
+            </tr>
+            <tr>
+              <td><strong>Programming Challenge Data</strong></td>
+              <td>User ID, submitted solution code, challenge completion status, points earned, badges.</td>
+              <td>Evaluating code against test cases and updating the challenge leaderboard.</td>
+            </tr>
+            <tr>
+              <td><strong>Command Inputs & AI Queries</strong></td>
+              <td>Command arguments (e.g., <code>!study 25</code>) and user questions submitted in designated AI channels.</td>
+              <td>Executing requested commands and generating AI responses via OpenRouter API.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="card-alert">
+          <strong>Audio Privacy Guarantee:</strong> BeeLert tracks <em>metadata only</em> (presence and duration). <strong>BeeLert NEVER records, listens to, captures, processes, or stores voice audio.</strong>
+        </div>
+      </section>
+
+      <section>
+        <h2>3. What Information We Do NOT Collect</h2>
+        <p>
+          We do not collect or store:
+        </p>
+        <ul>
+          <li>Real personal names, email addresses (unless you contact support), physical addresses, or phone numbers.</li>
+          <li>Financial, billing, or payment information.</li>
+          <li>Passwords, account credentials, or security tokens.</li>
+          <li>Private Direct Messages (DMs), except for incoming bot command interactions or opt-in reminder responses.</li>
+          <li>General message history or chat logs outside of designated bot commands or the dedicated AI channel.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>4. How We Use the Information</h2>
+        <p>
+          All collected data is strictly utilized for the following functionality:
+        </p>
+        <ul>
+          <li><strong>Clan Voice Tracking:</strong> Generating daily clan voice duration totals and member rankings.</li>
+          <li><strong>Progress Reminders:</strong> Sending automated daily reminder notifications at 9:00 PM IST and 11:00 PM IST, and sending inactivity alerts for untracked members.</li>
+          <li><strong>Programming Challenges:</strong> Validating submitted code against standard test cases, assigning challenge points, and rendering leaderboard standings.</li>
+          <li><strong>AI Assistance:</strong> Forwarding user queries in the AI chat channel to OpenRouter to return relevant responses. AI channel messages auto-delete after 24 hours.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>5. Data Storage & Security Measures</h2>
+        <p>
+          We employ industry-standard security safeguards to protect your information:
+        </p>
+        <ul>
+          <li><strong>Encrypted Database:</strong> Primary persistent data is securely stored in a Supabase PostgreSQL database protected by Row Level Security (RLS) and encrypted in transit via SSL/TLS.</li>
+          <li><strong>Credential Isolation:</strong> All bot tokens, database keys, and API secrets are managed through secure environment variables on Render and are never committed to public repositories or exposed to clients.</li>
+          <li><strong>Fault-Tolerant Cache:</strong> Local session state files are stored in a sandboxed runtime environment for high availability and failover.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>6. Third-Party Services</h2>
+        <p>
+          BeeLert integrates with the following trusted third-party providers:
+        </p>
+        <ul>
+          <li><strong>Discord Inc. (Discord API):</strong> Provides the messaging and gateway infrastructure over which BeeLert operates. Governed by <a href="https://discord.com/privacy" target="_blank" rel="noopener" style="color: #38bdf8;">Discord's Privacy Policy</a>.</li>
+          <li><strong>Supabase Inc.:</strong> Cloud PostgreSQL database hosting persistent tables for voice sessions, challenges, and progress reminders.</li>
+          <li><strong>OpenRouter Inc.:</strong> Provides language model API endpoints for generating AI chat responses. Only messages explicitly sent to the AI channel are forwarded to OpenRouter.</li>
+          <li><strong>Render Services Inc.:</strong> Cloud hosting provider running the bot application process and web endpoints.</li>
+        </ul>
+        <p>
+          We do NOT sell, rent, monetize, or trade your data with advertisers, data brokers, or any other commercial third parties.
+        </p>
+      </section>
+
+      <section>
+        <h2>7. Data Retention & Deletion</h2>
+        <p>
+          We retain user data only for as long as necessary to provide service functionality:
+        </p>
+        <ul>
+          <li><strong>Voice Session Logs:</strong> Retained for historical clan activity statistics and monthly reports.</li>
+          <li><strong>AI Chat Messages:</strong> Automatically deleted from Discord channels after 24 hours.</li>
+          <li><strong>Challenge & Progress Stats:</strong> Retained as long as the user actively participates in the Discord server.</li>
+        </ul>
+        <p>
+          <strong>Your Right to Data Deletion:</strong> You have the right at any time to request the complete deletion of your stored Discord user data, voice records, and challenge stats. To submit a deletion request:
+        </p>
+        <ul>
+          <li>Send an email to <a href="mailto:kjlethin24@gmail.com" style="color: #38bdf8;">kjlethin24@gmail.com</a> with your Discord User ID.</li>
+          <li>Or contact a team moderator on our Discord server (Server ID: <code>1163002451746623528</code>).</li>
+        </ul>
+        <p>
+          All valid deletion requests will be permanently purged from our Supabase database and local backups within 30 calendar days.
+        </p>
+      </section>
+
+      <section>
+        <h2>8. Children's Privacy</h2>
+        <p>
+          BeeLert does not knowingly collect or solicit personal information from children under the age of 13 (or under the applicable age of digital consent in your country). If you are under 13, please do not attempt to use BeeLert or send any personal data to the Bot. If we learn that we have inadvertently collected personal data from a child under 13, we will promptly delete that information.
+        </p>
+      </section>
+
+      <section>
+        <h2>9. Policy Updates</h2>
+        <p>
+          We may update this Privacy Policy from time to time to reflect changes in our bot functionality, security practices, or legal requirements. When we make updates, we will revise the "Last Updated" date at the top of this document. We encourage users to periodically review this page for the latest privacy information.
+        </p>
+      </section>
+
+      <section>
+        <h2>10. Contact Us</h2>
+        <p>
+          If you have questions, feedback, or requests regarding this Privacy Policy or how your data is handled, please contact our team:
+        </p>
+        <div class="contact-card">
+          <p><strong>Application:</strong> BeeLert (ID: 1438185938843996270)</p>
+          <p><strong>Team:</strong> Byte-Bash-Blitz</p>
+          <p><strong>Privacy Contact Email:</strong> <a href="mailto:kjlethin24@gmail.com" style="color: #38bdf8;">kjlethin24@gmail.com</a></p>
+          <p><strong>Developer Support:</strong> <a href="mailto:shabermohamadb@gmail.com" style="color: #38bdf8;">shabermohamadb@gmail.com</a></p>
+          <p><strong>Discord Community:</strong> Byte-Bash-Blitz (Server ID: 1163002451746623528)</p>
+        </div>
+      </section>
+    </article>
+  </main>
+
+  <footer>
+    <div class="footer-links">
+      <a href="/dashboard/">Dashboard</a>
+      <a href="/terms">Terms of Service</a>
+      <a href="/privacy">Privacy Policy</a>
+      <a href="/health">System Health</a>
+    </div>
+    <p>&copy; 2026 Byte-Bash-Blitz. All rights reserved. BeeLert is an independent Discord application not affiliated with Discord Inc.</p>
+  </footer>
+</body>
+</html>

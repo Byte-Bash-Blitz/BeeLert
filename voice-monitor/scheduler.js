@@ -85,6 +85,7 @@ function buildReportEmbed(displayDate, combinedSessions) {
     }
 
     // 2. Calculate Clan-specific Voice Statistics for each of the 4 clans
+    const clanBreakdown = [];
     const clanSections = Object.values(config.CLAN_VOICE_CHANNELS).map(clan => {
         const clanSessions = combinedSessions.filter(s =>
             s.voiceChannelId === clan.id || s.clanName === clan.name
@@ -95,20 +96,25 @@ function buildReportEmbed(displayDate, combinedSessions) {
             const uid = s.discordUserId;
             if (!clanUserStats.has(uid)) {
                 clanUserStats.set(uid, {
+                    clanName: clan.name,
+                    clanVoiceChannelId: clan.id,
+                    userId: uid,
                     displayName: s.displayName || s.username || `user_${uid}`,
                     username: s.username || `user_${uid}`,
-                    totalSeconds: 0,
+                    totalDuration: 0,
                     sessionCount: 0
                 });
             }
             const stat = clanUserStats.get(uid);
-            stat.totalSeconds += (s.durationSeconds || 0);
+            stat.totalDuration += (s.durationSeconds || 0);
             stat.sessionCount += 1;
         });
 
         const clanMembers = Array.from(clanUserStats.values())
-            .filter(m => m.totalSeconds > 0)
-            .sort((a, b) => b.totalSeconds - a.totalSeconds);
+            .filter(m => m.totalDuration > 0)
+            .sort((a, b) => b.totalDuration - a.totalDuration);
+
+        clanMembers.forEach(m => clanBreakdown.push(m));
 
         let clanBody = '';
         if (clanMembers.length === 0) {
@@ -116,7 +122,7 @@ function buildReportEmbed(displayDate, combinedSessions) {
         } else {
             clanBody = clanMembers.map((m, idx) => {
                 const icon = medals[idx] || `**#${idx + 1}**`;
-                return `${icon} **${m.displayName || m.username}** — ${formatDuration(m.totalSeconds)}`;
+                return `${icon} **${m.displayName || m.username}** — ${formatDuration(m.totalDuration)}`;
             }).join('\n');
         }
 
@@ -148,7 +154,8 @@ function buildReportEmbed(displayDate, combinedSessions) {
         embed,
         activeMembersCount,
         totalVoiceSeconds,
-        totalSessionsCount
+        totalSessionsCount,
+        clanBreakdown
     };
 }
 
@@ -175,43 +182,95 @@ async function generateAndSendDailyReport(client) {
         const dbSessions = await db.getSessionsForDate(isoDate);
         const combinedSessions = [...dbSessions];
 
-        // 4. Build Report Embed
-        const { embed, activeMembersCount, totalVoiceSeconds } = buildReportEmbed(displayDate, combinedSessions);
+        // 4. Build Report Embed and Structured Data
+        const { embed, activeMembersCount, totalVoiceSeconds, totalSessionsCount, clanBreakdown } = buildReportEmbed(displayDate, combinedSessions);
 
-        // 5. Strict Destination Validation: Send ONLY to AURA Server Status Channel
         const clanServerId = config.CLAN_SERVER_ID;
         const mainServerId = config.MAIN_SERVER_ID;
         const reportChannelId = config.REPORT_CHANNEL_ID;
 
+        // 5. Pre-save report to database with 'pending' status so report data is never lost
+        await db.markReportSent(isoDate, {
+            status: 'pending',
+            reportChannelId,
+            activeMembersCount,
+            totalSeconds: totalVoiceSeconds,
+            totalSessionsCount,
+            clanBreakdown
+        });
+
+        // 6. Strict Destination Validation: Send ONLY to AURA Server Status Channel
         const channel = await client.channels.fetch(reportChannelId).catch(() => null);
         if (!channel) {
             console.error(`❌ [DailyVoiceReport] Could not fetch report channel ${reportChannelId}`);
+            await db.markReportSent(isoDate, {
+                status: 'failed',
+                reportChannelId,
+                activeMembersCount,
+                totalSeconds: totalVoiceSeconds,
+                totalSessionsCount,
+                clanBreakdown
+            });
             return false;
         }
 
         // Security check: Never send report to Main Server
         if (channel.guild && channel.guild.id === mainServerId) {
             console.error(`❌ [DailyVoiceReport] Security Alert: Report channel ${reportChannelId} is located in Main Server ${mainServerId}! Aborting send.`);
+            await db.markReportSent(isoDate, {
+                status: 'failed',
+                reportChannelId,
+                activeMembersCount,
+                totalSeconds: totalVoiceSeconds,
+                totalSessionsCount,
+                clanBreakdown
+            });
             return false;
         }
 
         // Security check: Verify channel is in AURA / Clan Server
         if (channel.guild && channel.guild.id !== clanServerId) {
             console.error(`❌ [DailyVoiceReport] Security Alert: Report channel ${reportChannelId} is in guild ${channel.guild.id}, expected Clan Server ${clanServerId}`);
+            await db.markReportSent(isoDate, {
+                status: 'failed',
+                reportChannelId,
+                activeMembersCount,
+                totalSeconds: totalVoiceSeconds,
+                totalSessionsCount,
+                clanBreakdown
+            });
             return false;
         }
 
-        // 6. Post Report to AURA Server
-        await channel.send({ embeds: [embed] });
-        console.log(`✅ [DailyVoiceReport] Report sent successfully to AURA Server channel ${reportChannelId} for ${isoDate}`);
+        // 7. Post Report to AURA Server
+        try {
+            const sentMessage = await channel.send({ embeds: [embed] });
+            console.log(`✅ [DailyVoiceReport] Report sent successfully to AURA Server channel ${reportChannelId} for ${isoDate} (Message ID: ${sentMessage.id})`);
 
-        // 7. Mark report sent in database
-        await db.markReportSent(isoDate, {
-            activeMembersCount,
-            totalSeconds: totalVoiceSeconds
-        });
+            // 8. Update report status to 'sent' and save message ID in database
+            await db.markReportSent(isoDate, {
+                status: 'sent',
+                reportMessageId: sentMessage.id,
+                reportChannelId,
+                activeMembersCount,
+                totalSeconds: totalVoiceSeconds,
+                totalSessionsCount,
+                clanBreakdown
+            });
 
-        return true;
+            return true;
+        } catch (sendErr) {
+            console.error('❌ [DailyVoiceReport] Discord API send failed:', sendErr.message);
+            await db.markReportSent(isoDate, {
+                status: 'failed',
+                reportChannelId,
+                activeMembersCount,
+                totalSeconds: totalVoiceSeconds,
+                totalSessionsCount,
+                clanBreakdown
+            });
+            return false;
+        }
     } catch (err) {
         console.error('❌ [DailyVoiceReport] Error generating daily report:', err);
         return false;

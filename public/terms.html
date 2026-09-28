@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Terms of Service — BeeLert Discord Bot</title>
+  <meta name="description" content="Terms of Service for BeeLert, an automated Discord bot for voice tracking, daily progress reminders, and programming challenges." />
+  <style>
+    :root {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-card: #182234;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent: #5865f2;
+      --accent-hover: #4752c4;
+      --accent-glow: rgba(88, 101, 242, 0.2);
+      --border: #334155;
+      --success: #10b981;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.7;
+      padding: 0;
+      margin: 0;
+    }
+
+    header {
+      background-color: rgba(15, 23, 42, 0.9);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 1rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      text-decoration: none;
+    }
+
+    .brand-badge {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #000;
+      font-size: 0.75rem;
+      font-weight: 800;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    nav {
+      display: flex;
+      gap: 1rem;
+    }
+
+    nav a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.925rem;
+      font-weight: 500;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+    }
+
+    nav a:hover, nav a.active {
+      color: var(--text-primary);
+      background-color: var(--bg-secondary);
+    }
+
+    main {
+      max-width: 900px;
+      margin: 2.5rem auto 4rem;
+      padding: 0 1.5rem;
+    }
+
+    .doc-hero {
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1.5rem;
+    }
+
+    .doc-hero h1 {
+      font-size: 2.25rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.5px;
+    }
+
+    .meta {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .meta span {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    article section {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.75rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    }
+
+    h2 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #38bdf8;
+      margin-bottom: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    p {
+      color: var(--text-secondary);
+      margin-bottom: 1rem;
+    }
+
+    p:last-child {
+      margin-bottom: 0;
+    }
+
+    ul, ol {
+      color: var(--text-secondary);
+      padding-left: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    li {
+      margin-bottom: 0.5rem;
+    }
+
+    strong {
+      color: var(--text-primary);
+    }
+
+    .highlight-box {
+      background-color: var(--bg-secondary);
+      border-left: 4px solid var(--accent);
+      padding: 1rem 1.25rem;
+      border-radius: 0 8px 8px 0;
+      margin: 1rem 0;
+    }
+
+    .contact-card {
+      background: linear-gradient(135deg, rgba(88, 101, 242, 0.1), rgba(56, 189, 248, 0.05));
+      border: 1px solid rgba(88, 101, 242, 0.3);
+      padding: 1.5rem;
+      border-radius: 12px;
+      margin-top: 2rem;
+    }
+
+    footer {
+      border-top: 1px solid var(--border);
+      background-color: var(--bg-primary);
+      padding: 2.5rem 1.5rem;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      text-align: center;
+    }
+
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .footer-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+    }
+
+    .footer-links a:hover {
+      color: var(--accent);
+    }
+
+    @media (max-width: 640px) {
+      .header-container {
+        flex-direction: column;
+        gap: 0.75rem;
+        align-items: flex-start;
+      }
+      .doc-hero h1 {
+        font-size: 1.75rem;
+      }
+      article section {
+        padding: 1.25rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-container">
+      <a href="/dashboard/" class="brand">
+        <span>🐝 BeeLert</span>
+        <span class="brand-badge">BOT</span>
+      </a>
+      <nav>
+        <a href="/dashboard/">Dashboard</a>
+        <a href="/terms" class="active">Terms of Service</a>
+        <a href="/privacy">Privacy Policy</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="doc-hero">
+      <h1>Terms of Service</h1>
+      <div class="meta">
+        <span><strong>Application:</strong> BeeLert (ID: 1438185938843996270)</span>
+        <span><strong>Effective Date:</strong> September 28, 2026</span>
+        <span><strong>Last Updated:</strong> September 28, 2026</span>
+      </div>
+    </div>
+
+    <article>
+      <section>
+        <h2>1. Introduction & Acceptance of Terms</h2>
+        <p>
+          Welcome to <strong>BeeLert</strong> ("the Bot", "we", "us", or "our"), an automated Discord application developed and maintained by the <strong>Byte-Bash-Blitz</strong> team. BeeLert provides community productivity tools, including clan voice channel activity tracking, daily progress reminders, daily programming challenges, and study accountability tools.
+        </p>
+        <p>
+          By inviting BeeLert to your Discord guild (server), interacting with its commands, or utilizing its features, you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, you must not invite or use BeeLert, and server administrators must remove the Bot from their server.
+        </p>
+      </section>
+
+      <section>
+        <h2>2. Eligibility & Discord Terms Compliance</h2>
+        <p>
+          To use BeeLert, you must be at least 13 years of age (or the minimum legal age required in your jurisdiction to use Discord services). By using BeeLert, you represent and warrant that you meet this requirement.
+        </p>
+        <p>
+          You also agree to strictly abide by:
+        </p>
+        <ul>
+          <li><a href="https://discord.com/terms" target="_blank" rel="noopener" style="color: #38bdf8;">Discord Terms of Service</a></li>
+          <li><a href="https://discord.com/guidelines" target="_blank" rel="noopener" style="color: #38bdf8;">Discord Community Guidelines</a></li>
+          <li><a href="/privacy" style="color: #38bdf8;">BeeLert Privacy Policy</a></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>3. Use of the Discord Bot</h2>
+        <p>
+          BeeLert provides server administrators and members with automated moderation and engagement features, including:
+        </p>
+        <ul>
+          <li><strong>Clan Voice Channel Activity Monitoring:</strong> Automatically calculates active voice duration for members in designated clan voice channels (AURA, BELMONT, LUMINA, SHADASTRIA) and generates consolidated daily reports.</li>
+          <li><strong>Daily Progress Reminder System:</strong> Manages daily productivity reminders, inactivity tracking, and streak verification for community members.</li>
+          <li><strong>Daily Programming Challenge System:</strong> Provides daily coding questions, evaluates user code submissions, tracks challenge points, and updates server leaderboards.</li>
+          <li><strong>Study Timers & Meeting Tracking:</strong> Enables users to initiate focused study timers (<code>!study</code>) and records meeting attendance metrics.</li>
+          <li><strong>AI Assistant Chat:</strong> Provides automated assistance via OpenRouter inference models in designated bot channels.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>4. User Responsibilities & Acceptable Use</h2>
+        <p>
+          When using BeeLert, you agree to:
+        </p>
+        <ul>
+          <li>Use the Bot in good faith and in compliance with all applicable laws and server rules.</li>
+          <li>Provide accurate command parameters and challenge code submissions.</li>
+          <li>Maintain appropriate server permissions to govern bot access and channels.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>5. Prohibited Usage</h2>
+        <p>
+          You strictly agree NOT to:
+        </p>
+        <ul>
+          <li>Attempt to exploit, bypass, overload, or spam the Bot's commands, APIs, or rate limits.</li>
+          <li>Submit malicious code, malware, exploits, or dangerous scripts through the programming challenge module.</li>
+          <li>Use the Bot to harass, spam, abuse, defraud, or impersonate other users.</li>
+          <li>Reverse-engineer, decompile, or tamper with the Bot's backend infrastructure or database.</li>
+          <li>Use automated bots or scripts to manipulate clan voice statistics, leaderboards, or progress streaks.</li>
+        </ul>
+        <div class="highlight-box">
+          <strong>Enforcement:</strong> Any user or server found violating these prohibitions may be immediately banned from using BeeLert without prior notice.
+        </div>
+      </section>
+
+      <section>
+        <h2>6. Data & Content Handling</h2>
+        <p>
+          BeeLert processes only the minimal data necessary to deliver its core functions:
+        </p>
+        <ul>
+          <li><strong>Identification:</strong> Discord User IDs, Usernames, and Display Names are processed solely to attribute voice session duration, challenge points, and progress reminders.</li>
+          <li><strong>Voice Monitoring:</strong> BeeLert logs join/leave timestamps and calculates session durations. <strong>BeeLert NEVER records, listens to, captures, or transmits audio streams.</strong></li>
+          <li><strong>Challenge Submissions:</strong> Code submitted to the programming challenge evaluator is processed in a sandboxed runtime environment solely for test case evaluation.</li>
+        </ul>
+        <p>
+          For full details on data collection, storage, and retention, review our <a href="/privacy" style="color: #38bdf8;">Privacy Policy</a>.
+        </p>
+      </section>
+
+      <section>
+        <h2>7. Availability, Maintenance & Modifications</h2>
+        <p>
+          BeeLert is provided on an <strong>"AS IS"</strong> and <strong>"AS AVAILABLE"</strong> basis. While we strive to maintain 99.9% uptime:
+        </p>
+        <ul>
+          <li>Service may experience periodic interruptions due to cloud infrastructure maintenance (e.g., Render or Discord API updates).</li>
+          <li>We reserve the right to modify, update, enhance, or discontinue features of the Bot at any time with or without prior notice.</li>
+          <li>We are not responsible for any lost statistics, missed notifications, or delays resulting from Discord Gateway connectivity drops or third-party outages.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>8. Termination</h2>
+        <p>
+          Server administrators may terminate their use of BeeLert at any time by kicking or banning the Bot from their server.
+        </p>
+        <p>
+          We reserve the right to suspend or permanently block access to BeeLert for any user, guild, or team that violates these Terms, abuses bot resources, or engages in harmful behavior.
+        </p>
+      </section>
+
+      <section>
+        <h2>9. Disclaimer of Warranties</h2>
+        <p>
+          TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, BEELERT AND ITS DEVELOPERS DISCLAIM ALL WARRANTIES OF ANY KIND, WHETHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, INCLUDING WITHOUT LIMITATION WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+        </p>
+      </section>
+
+      <section>
+        <h2>10. Limitation of Liability</h2>
+        <p>
+          IN NO EVENT SHALL THE DEVELOPERS, MAINTAINERS, OR AFFILIATES OF BEELERT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES (INCLUDING LOSS OF DATA, REPUTATION, OR SERVICE INTERRUPTIONS) ARISING OUT OF OR IN CONNECTION WITH YOUR USE OR INABILITY TO USE THE BOT, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+        </p>
+      </section>
+
+      <section>
+        <h2>11. Contact Information</h2>
+        <p>
+          If you have questions, concerns, or inquiries regarding these Terms of Service, please reach out to the developer team:
+        </p>
+        <div class="contact-card">
+          <p><strong>Application:</strong> BeeLert</p>
+          <p><strong>Team:</strong> Byte-Bash-Blitz</p>
+          <p><strong>Lead Maintainer Email:</strong> <a href="mailto:kjlethin24@gmail.com" style="color: #38bdf8;">kjlethin24@gmail.com</a></p>
+          <p><strong>Support Email:</strong> <a href="mailto:shabermohamadb@gmail.com" style="color: #38bdf8;">shabermohamadb@gmail.com</a></p>
+          <p><strong>Discord Community Server ID:</strong> 1163002451746623528</p>
+        </div>
+      </section>
+    </article>
+  </main>
+
+  <footer>
+    <div class="footer-links">
+      <a href="/dashboard/">Dashboard</a>
+      <a href="/terms">Terms of Service</a>
+      <a href="/privacy">Privacy Policy</a>
+      <a href="/health">System Health</a>
+    </div>
+    <p>&copy; 2026 Byte-Bash-Blitz. All rights reserved. BeeLert is an independent Discord application not affiliated with Discord Inc.</p>
+  </footer>
+</body>
+</html>

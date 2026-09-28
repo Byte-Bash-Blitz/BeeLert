@@ -3,6 +3,11 @@ const cron = require('node-cron');
 const express = require('express');
 require('dotenv').config();
 
+// Ensure IPv4 is prioritized for DNS resolution to prevent IPv6 AAAA timeouts on Cloudflare/Render
+const dns = require('dns');
+if (typeof dns.setDefaultResultOrder === 'function') {
+    dns.setDefaultResultOrder('ipv4first');
+}
 // Import AI service
 const aiService = require('./services/aiService');
 // Import Supabase service
@@ -10,30 +15,64 @@ const supabaseService = require('./services/supabaseService');
 // Import Voice Monitor module
 const voiceMonitor = require('./voice-monitor');
 
-// ==== INSTANCE LOCK: Prevent duplicate bot instances (Replit issue) ====
+// ==== INSTANCE LOCK: Prevent duplicate bot instances (Replit / Deployment issue) ====
 const INSTANCE_ID = `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 let isPrimaryInstance = true; // assume primary until proven otherwise
 
+async function releaseInstanceLock() {
+    if (!supabaseService.isSupabaseConfigured()) return;
+    try {
+        const { supabase } = supabaseService;
+        await supabase
+            .from('heartbeat_logs')
+            .delete()
+            .eq('bot_status', 'bot_instance_lock')
+            .eq('first_ping', INSTANCE_ID);
+        console.log(`[Instance Lock] Released lock for instance ${INSTANCE_ID}`);
+    } catch (e) {
+        // Ignore errors during exit
+    }
+}
+
 async function claimInstanceLock() {
+    // Single-instance mode override
+    if (process.env.DISABLE_INSTANCE_LOCK === 'true') {
+        console.log('ℹ️ Instance lock disabled via DISABLE_INSTANCE_LOCK=true (Single-instance mode)');
+        return true;
+    }
     if (!supabaseService.isSupabaseConfigured()) return true;
     try {
         const { supabase } = supabaseService;
         const now = new Date().toISOString();
         const LOCK_KEY = 'bot_instance_lock';
 
-        // Try to read current lock
-        const { data: existing } = await supabase
+        // Query active lock rows ordered by last_ping DESC (avoids .single() failure on 0 or multiple rows)
+        const { data: rows, error: qErr } = await supabase
             .from('heartbeat_logs')
             .select('*')
             .eq('bot_status', LOCK_KEY)
-            .single();
+            .order('last_ping', { ascending: false })
+            .limit(5);
+
+        if (qErr) {
+            console.error('⚠️ Instance lock query error, assuming primary:', qErr.message);
+            return true; // fail-open
+        }
+
+        const existing = rows && rows.length > 0 ? rows[0] : null;
+
+        // Clean up redundant rows if multiple locks accumulated
+        if (rows && rows.length > 1) {
+            const staleIds = rows.slice(1).map(r => r.id);
+            await supabase.from('heartbeat_logs').delete().in('id', staleIds).catch(() => {});
+        }
 
         if (existing) {
             const lastPing = new Date(existing.last_ping);
             const staleMs = Date.now() - lastPing.getTime();
             // If lock is fresh (< 30s old) and held by another instance, we are secondary
             if (staleMs < 30000 && existing.first_ping !== INSTANCE_ID) {
-                console.log(`⚠️ Another instance is primary (${existing.first_ping}). This instance (${INSTANCE_ID}) will stay IDLE.`);
+                console.log(`⚠️ Another instance is primary (${existing.first_ping}, last ping ${Math.round(staleMs/1000)}s ago). This instance (${INSTANCE_ID}) will stay IDLE.`);
                 return false;
             }
             // Lock is stale or ours — claim it
@@ -73,14 +112,24 @@ setInterval(async () => {
         try {
             const claimed = await claimInstanceLock();
             if (claimed) {
-                console.log('🔄 Secondary instance promoted to PRIMARY — registering cron jobs...');
-                isPrimaryInstance = true;
-                botStatus.isOnline = true;
-                registerCronJobs();
+                await promoteToPrimary();
             }
         } catch (e) { /* ignore promotion errors */ }
     }
 }, 15000);
+
+// Graceful shutdown: release instance lock so new deployments can take over immediately
+process.on('SIGTERM', async () => {
+    console.log('🛑 [Bot] SIGTERM received. Gracefully shutting down and releasing instance lock...');
+    await releaseInstanceLock();
+    process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+    console.log('🛑 [Bot] SIGINT received. Gracefully shutting down and releasing instance lock...');
+    await releaseInstanceLock();
+    process.exit(0);
+});
 
 console.log(`🆔 Instance ID: ${INSTANCE_ID} — if you see this twice, two instances are running!`);
 
@@ -143,7 +192,7 @@ try {
 }
 
 // Configuration from environment variables
-const BOT_TOKEN = process.env.BOT_TOKEN;
+const BOT_TOKEN = (process.env.BOT_TOKEN || process.env.DISCORD_TOKEN || '').trim();
 const CHANNEL_ID = process.env.CHANNEL_ID || '1350324320496255102';
 const GEMINI_CHANNEL_ID = process.env.GEMINI_CHANNEL_ID;
 const STUDY_CHANNEL_ID = process.env.STUDY_CHANNEL_ID;
@@ -962,12 +1011,40 @@ app.get('/ping', (req, res) => {
 });
 
 app.get('/health', (req, res) => {
+    const dbHealth = supabaseService.getDatabaseHealth();
     res.status(200).json({
         status: 'OK',
         botOnline: botStatus.isOnline,
+        database: {
+            connected: dbHealth.connected,
+            configured: dbHealth.isConfigured,
+            latencyMs: dbHealth.latencyMs,
+            lastChecked: dbHealth.lastChecked,
+            error: dbHealth.error
+        },
         uptime: botStatus.connectedAt ? Math.floor((Date.now() - new Date(botStatus.connectedAt)) / 1000) : 0,
         timestamp: new Date().toISOString()
     });
+});
+
+// Static files and Legal Pages (Discord App Verification)
+const path = require('path');
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.get('/terms', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public/terms.html'));
+});
+
+app.get('/terms-of-service', (req, res) => {
+    res.redirect(301, '/terms');
+});
+
+app.get('/privacy', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public/privacy.html'));
+});
+
+app.get('/privacy-policy', (req, res) => {
+    res.redirect(301, '/privacy');
 });
 
 app.get('/', (req, res) => {
@@ -975,9 +1052,17 @@ app.get('/', (req, res) => {
 });
 
 app.get('/status', (req, res) => {
+    const dbHealth = supabaseService.getDatabaseHealth();
     res.status(200).json({
         status: 'OK',
         botOnline: botStatus.isOnline,
+        database: {
+            connected: dbHealth.connected,
+            configured: dbHealth.isConfigured,
+            latencyMs: dbHealth.latencyMs,
+            lastChecked: dbHealth.lastChecked,
+            error: dbHealth.error
+        },
         connectedAt: botStatus.connectedAt,
         lastMessageSent: botStatus.lastMessageSent,
         totalMessagesSent: botStatus.totalMessagesSent,
@@ -989,11 +1074,37 @@ app.get('/status', (req, res) => {
 
 // Start Express server (can be disabled with NO_HTTP=true to avoid Replit dual-instance issues)
 if (process.env.NO_HTTP !== 'true') {
-    app.listen(PORT, '0.0.0.0', () => {
-        console.log(`Express server running on 0.0.0.0:${PORT}`);
-        console.log(`Health check: http://0.0.0.0:${PORT}/health`);
-        console.log(`Status check: http://0.0.0.0:${PORT}/status`);
-    });
+    function startHttpServer(portToUse) {
+        const server = app.listen(portToUse, '0.0.0.0', () => {
+            console.log(`Express server running on 0.0.0.0:${portToUse}`);
+            console.log(`Health check: http://0.0.0.0:${portToUse}/health`);
+            console.log(`Status check: http://0.0.0.0:${portToUse}/status`);
+        });
+        server.on('error', (err) => {
+            if (err.code === 'EADDRINUSE') {
+                const nextPort = Number(portToUse) + 1;
+                console.warn(`⚠️ Port ${portToUse} is in use, retrying on port ${nextPort}...`);
+                startHttpServer(nextPort);
+            } else {
+                console.error('❌ Express server error:', err.message);
+            }
+        });
+    }
+    startHttpServer(PORT);
+
+    // Keep-alive self-pinger to prevent 15-minute free tier spin down on Render
+    const externalUrl = process.env.RENDER_EXTERNAL_URL || process.env.APP_URL || process.env.SELF_URL;
+    if (externalUrl) {
+        console.log(`🌐 [KeepAlive] Configured keep-alive pinger for external URL: ${externalUrl}`);
+        setInterval(async () => {
+            try {
+                const pingUrl = `${externalUrl.replace(/\/$/, '')}/ping`;
+                await fetch(pingUrl, { headers: { 'User-Agent': 'BeeLert-KeepAlive/1.0' } });
+            } catch (e) {
+                // Ignore transient network blips
+            }
+        }, 10 * 60 * 1000); // Ping every 10 minutes
+    }
 } else {
     console.log('⚠️ HTTP server disabled (NO_HTTP=true) — bot-only mode');
 }
@@ -1846,11 +1957,48 @@ async function registerCronJobs() {
 
     // Initialize Daily Voice Activity Monitoring System
     voiceMonitor.init(client);
+    console.log('[Scheduler] Started');
+}
+
+// Promote secondary instance to primary if previous instance died or released lock
+async function promoteToPrimary() {
+    console.log('🔄 Secondary instance promoted to PRIMARY — initializing all bot systems...');
+    isPrimaryInstance = true;
+    botStatus.isOnline = true;
+    botStatus.connectedAt = botStatus.connectedAt || new Date().toISOString();
+
+    try {
+        await loadRemindersFromDatabase();
+    } catch (e) {
+        console.error('Error loading reminders on promotion:', e);
+    }
+
+    if (client.isReady()) {
+        try {
+            console.log('Registering slash commands on promotion...');
+            let progCmds = [];
+            try {
+                progCmds = require('./programming-challenge').getSlashCommands().map(c => c.toJSON());
+            } catch(e) {}
+            const allCommands = [...commands, ...progCmds];
+            const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+            await rest.put(
+                Routes.applicationCommands(client.user.id),
+                { body: allCommands }
+            );
+            console.log('✅ Slash commands registered successfully on promotion!');
+        } catch (e) {
+            console.error('Error registering slash commands on promotion:', e);
+        }
+    }
+
+    await registerCronJobs();
 }
 
 // Bot ready event
 client.once(Events.ClientReady, async (c) => {
     try {
+        console.log('[Discord] Ready');
         console.log(`${c.user.tag} has connected to Discord!`);
         console.log(`Bot is ready at ${formatISTTime(getISTTime())}`);
 
@@ -4180,82 +4328,280 @@ client.once(Events.ClientReady, async () => {
     }
 });
 
-// Error Handling
-client.on(Events.Error, error => {
-    console.error('❌ Discord client error:', error);
-    botStatus.isOnline = false;
-});
-
-client.on('warn', (warn) => {
-    console.warn('⚠️ Discord client warning:', warn);
-});
-
+// Error & Rejection Handling
 process.on('unhandledRejection', error => {
     console.error('❌ Unhandled promise rejection:', error);
 });
 
-// Login to Discord
-console.log('🔐 Attempting to login to Discord...');
-if (!BOT_TOKEN) {
-    console.error('❌ BOT_TOKEN is not set in environment variables!');
-    process.exit(1);
-}
-
-client.on('error', error => {
-    console.error('🔍 [CLIENT ERROR]', error.message);
-});
-
-client.on('shardError', (error, shardId) => {
-    console.error(`❌ [SHARD ERROR ${shardId}]`, error.message);
-});
-
-client.on('shardDisconnect', (event, shardId) => {
-    console.warn(`⚠️ [SHARD DISCONNECT ${shardId}] Code: ${event.code}, Reason: ${event.reason || 'None'}`);
-    if (event.code === 4014) {
-        console.error('💥 CRITICAL DISCORD ERROR 4014: Disallowed Intent(s)!');
-        console.error('👉 You MUST enable "MESSAGE CONTENT INTENT" & "SERVER MEMBERS INTENT" in Discord Developer Portal!');
-        console.error('   Visit: https://discord.com/developers/applications -> Bot -> Privileged Gateway Intents');
+// Comprehensive Discord Diagnostics & Gateway Event Listeners
+client.on(Events.Debug, (message) => {
+    // Redact token from debug strings
+    const safeMsg = BOT_TOKEN ? message.split(BOT_TOKEN).join('[REDACTED]') : message;
+    // Log websocket and connection lifecycle messages
+    if (
+        safeMsg.includes('[WS') ||
+        safeMsg.includes('Heartbeat') ||
+        safeMsg.includes('Identify') ||
+        safeMsg.includes('Session') ||
+        safeMsg.includes('Resume') ||
+        safeMsg.includes('Ready') ||
+        safeMsg.includes('Connect') ||
+        safeMsg.includes('Preparing') ||
+        safeMsg.includes('Provided token') ||
+        safeMsg.includes('closed') ||
+        safeMsg.includes('Destroy')
+    ) {
+        console.log(`🔍 [Discord:Debug] ${safeMsg}`);
     }
 });
 
-client.rest.on('rateLimited', (info) => {
-    console.warn('⚠️ [RATE LIMITED]', info);
+client.on(Events.Warn, (warn) => {
+    console.warn('⚠️ [Discord:Warn]', warn);
 });
 
-async function connectToDiscord(maxRetries = 3) {
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+client.on(Events.Error, (error) => {
+    console.error('❌ [Discord:Error]', error?.message || error);
+    botStatus.isOnline = false;
+});
+
+client.on(Events.ShardError, (error, shardId) => {
+    console.error(`❌ [Discord:ShardError ${shardId}]`, error?.message || error);
+});
+
+client.on(Events.ShardDisconnect, (event, shardId) => {
+    console.warn(`⚠️ [Discord:ShardDisconnect ${shardId}] Code: ${event.code}, Reason: ${event.reason || 'None'}`);
+    if (event.code === 4014) {
+        console.error('💥 CRITICAL DISCORD ERROR 4014: Disallowed Intent(s)!');
+        console.error('👉 You MUST enable "MESSAGE CONTENT INTENT" & "SERVER MEMBERS INTENT" in Discord Developer Portal!');
+        console.error('   Visit: https://discord.com/developers/applications -> Select your App -> Bot -> Privileged Gateway Intents');
+        console.error('   Toggle ON: "Server Members Intent" (REQUIRED) & "Message Content Intent" (REQUIRED)');
+        console.error('   Then click "Save Changes".');
+    } else if (event.code === 4004) {
+        console.error('💥 CRITICAL DISCORD ERROR 4004: Authentication Failed (Invalid Bot Token)!');
+        console.error('👉 The BOT_TOKEN configured in Render environment variables is rejected by Discord API.');
+    } else if (event.code === 1006) {
+        console.warn('⚠️ [Discord:ShardDisconnect] Abnormal closure (Code 1006). Connection dropped by Discord Gateway or Cloudflare proxy.');
+    }
+});
+
+client.on(Events.ShardReconnecting, (shardId) => {
+    console.log(`🔄 [Discord:ShardReconnecting ${shardId}] Attempting to reconnect to Gateway...`);
+});
+
+client.on(Events.ShardReady, (shardId, unavailableGuilds) => {
+    console.log(`🟢 [Discord:ShardReady ${shardId}] Shard is ready! (Unavailable guilds: ${unavailableGuilds?.size || 0})`);
+});
+
+client.on(Events.ShardResume, (shardId, replayedEvents) => {
+    console.log(`🔄 [Discord:ShardResume ${shardId}] Gateway connection resumed (${replayedEvents} events replayed).`);
+});
+
+client.rest.on('rateLimited', (info) => {
+    console.warn(`⚠️ [Discord:RestRateLimit] Hit rate limit! Timeout: ${info.timeToReset}ms, Limit: ${info.limit}, Route: ${info.route}`);
+});
+
+client.rest.on('invalidRequestWarning', (info) => {
+    console.warn('⚠️ [Discord:RestInvalidRequest]', info);
+});
+
+// Pre-flight diagnostic probe for Discord Gateway & Token
+const https = require('https');
+
+async function runPreFlightDiagnostics(token) {
+    const isPresent = Boolean(token && token.length > 0);
+    const length = token ? token.length : 0;
+    const prefix = token && token.length >= 4 ? token.substring(0, 4) + '...' : 'none';
+    const dotCount = token ? (token.match(/\./g) || []).length : 0;
+
+    console.log(`[Discord:PreFlight] Token configured: ${isPresent}, Length: ${length}, Prefix: ${prefix}, Structure: ${dotCount === 2 ? 'Valid 3-part token' : 'Non-standard'}`);
+
+    if (!isPresent) {
+        return { ok: false, fatal: true, reason: 'TOKEN_MISSING' };
+    }
+
+    // 1. DNS Resolution Check for gateway.discord.gg
+    try {
+        const gwIps = await dns.promises.resolve4('gateway.discord.gg');
+        console.log(`[Discord:PreFlight] DNS gateway.discord.gg resolved -> ${gwIps.slice(0, 3).join(', ')}`);
+    } catch (dnsErr) {
+        console.warn(`⚠️ [Discord:PreFlight] DNS resolve for gateway.discord.gg failed: ${dnsErr.message}`);
+    }
+
+    // 2. REST API /gateway/bot verification
+    return new Promise((resolve) => {
+        const startTime = Date.now();
+        const req = https.request('https://discord.com/api/v10/gateway/bot', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bot ${token}`,
+                'User-Agent': 'DiscordBot (BeeLert, 1.0.0)'
+            },
+            timeout: 15000
+        }, (res) => {
+            let body = '';
+            res.on('data', chunk => body += chunk);
+            res.on('end', () => {
+                const latency = Date.now() - startTime;
+                let parsed = null;
+                try {
+                    parsed = JSON.parse(body);
+                } catch (e) {}
+
+                if (res.statusCode === 200 && parsed) {
+                    console.log(`✅ [Discord:PreFlight] REST Gateway OK (${latency}ms)`);
+                    console.log(`   Gateway URL: ${parsed.url}`);
+                    console.log(`   Recommended Shards: ${parsed.shards}`);
+                    if (parsed.session_start_limit) {
+                        const { total, remaining, reset_after, max_concurrency } = parsed.session_start_limit;
+                        console.log(`   Session Limit: ${remaining}/${total} remaining (resets in ${Math.round(reset_after / 1000)}s, max concurrency: ${max_concurrency})`);
+                        if (remaining <= 0) {
+                            console.warn(`⚠️ [Discord:PreFlight] Gateway session start limit REACHED (0 remaining)!`);
+                            return resolve({ ok: false, reason: 'SESSION_LIMIT_EXHAUSTED', sessionLimit: parsed.session_start_limit });
+                        }
+                    }
+                    return resolve({ ok: true, data: parsed, latency });
+                } else if (res.statusCode === 401) {
+                    console.error('💥 [Discord:PreFlight] FATAL: Authentication FAILED (HTTP 401 Unauthorized)!');
+                    console.error('👉 The BOT_TOKEN configured in Render environment variables is rejected by Discord API.');
+                    console.error('   Please visit Discord Developer Portal (https://discord.com/developers/applications), reset the Bot token, and update BOT_TOKEN in Render.');
+                    return resolve({ ok: false, fatal: true, reason: 'TOKEN_INVALID_401' });
+                } else if (res.statusCode === 429) {
+                    const retryAfter = res.headers['retry-after'] || (parsed && parsed.retry_after) || 5;
+                    console.warn(`⚠️ [Discord:PreFlight] Rate limited by Discord API (HTTP 429). Retry after ${retryAfter}s`);
+                    return resolve({ ok: false, reason: 'RATE_LIMITED_429', retryAfterSec: Number(retryAfter) });
+                } else if (res.statusCode === 403) {
+                    console.error(`💥 [Discord:PreFlight] Access Forbidden (HTTP 403). Cloudflare or Discord may be blocking requests from this IP.`);
+                    return resolve({ ok: false, reason: 'FORBIDDEN_403' });
+                } else {
+                    console.warn(`⚠️ [Discord:PreFlight] Unexpected response HTTP ${res.statusCode}: ${body.slice(0, 200)}`);
+                    return resolve({ ok: false, reason: `HTTP_${res.statusCode}` });
+                }
+            });
+        });
+
+        req.on('timeout', () => {
+            req.destroy(new Error('PreFlight HTTP request timed out (15s)'));
+        });
+
+        req.on('error', (err) => {
+            console.warn(`⚠️ [Discord:PreFlight] REST check network error: ${err.message}`);
+            return resolve({ ok: false, reason: err.code || err.message });
+        });
+
+        req.end();
+    });
+}
+
+async function connectToDiscord() {
+    console.log('[Bot] Starting...');
+    console.log(`[Runtime] Node.js: ${process.version}, Platform: ${process.platform} (${process.arch})`);
+    console.log('[Database] Connecting...');
+    try {
+        const isDbConnected = await supabaseService.testConnection(3, 1000);
+        if (isDbConnected) {
+            console.log('[Database] Connected');
+        } else {
+            const health = supabaseService.getDatabaseHealth();
+            console.warn(`⚠️ [Database] Connection warning: ${health.error || 'Connection failed'}. Continuing with local fallback.`);
+        }
+    } catch (dbErr) {
+        console.warn('⚠️ [Database] Connection check error:', dbErr.message);
+    }
+
+    if (!BOT_TOKEN) {
+        console.error('❌ [Discord] FATAL: BOT_TOKEN is not configured in environment variables!');
+        console.error('👉 Set BOT_TOKEN in your Render dashboard under Environment Variables.');
+        console.error('   Express health server will stay active to prevent crash looping.');
+        botStatus.isOnline = false;
+        botStatus.discordError = 'BOT_TOKEN_NOT_CONFIGURED';
+        return false;
+    }
+
+    console.log('[Discord] Logging in...');
+    console.log(`[Discord] Token present: true, length: ${BOT_TOKEN.length}, prefix: ${BOT_TOKEN.substring(0, 4)}...`);
+
+    let attempt = 0;
+    while (true) {
+        attempt++;
+        console.log(`🔐 Attempting Discord login (Attempt ${attempt})...`);
+
+        // Run pre-flight diagnostic check before login attempt
+        const preFlight = await runPreFlightDiagnostics(BOT_TOKEN);
+        if (preFlight.fatal) {
+            console.error(`💥 [Discord] Fatal authentication error: ${preFlight.reason}. Halting retries until token is updated.`);
+            console.error('   Express server will stay alive to respond to health checks.');
+            botStatus.isOnline = false;
+            botStatus.discordError = preFlight.reason;
+            return false;
+        }
+
+        if (preFlight.sessionLimit && preFlight.sessionLimit.remaining === 0) {
+            const waitMs = Math.max(5000, preFlight.sessionLimit.reset_after || 5000);
+            console.warn(`⏳ [Discord] Session limit reached. Waiting ${Math.round(waitMs / 1000)}s before login...`);
+            await new Promise(r => setTimeout(r, waitMs + 1000));
+        }
+
         try {
-            console.log(`🔐 Attempting Discord login (Attempt ${attempt}/${maxRetries})...`);
-            
+            // Clean up any existing client/websocket state before connecting
+            try {
+                await client.destroy();
+            } catch (destroyErr) {
+                // Ignore destroy errors on uninitialized client
+            }
+
             let timerId;
             const loginPromise = client.login(BOT_TOKEN);
             const timeoutPromise = new Promise((_, reject) => {
-                timerId = setTimeout(() => reject(new Error('Discord login connection timed out (90s)')), 90000);
+                timerId = setTimeout(() => {
+                    reject(new Error('Discord login connection timed out (90s)'));
+                }, 90000);
             });
 
             await Promise.race([loginPromise, timeoutPromise]);
             clearTimeout(timerId);
             console.log('✅ Discord login successful');
+            botStatus.isOnline = true;
             return true;
         } catch (error) {
             console.error(`❌ Discord login attempt ${attempt} failed:`, error.message);
             if (error.code) console.error('   Error Code:', error.code);
 
+            // Clean up client immediately after failure to reset WebSocket state
+            try {
+                await client.destroy();
+            } catch (e) {}
+
+            // Handle invalid token error
             if (error.message.includes('TOKEN_INVALID') || error.message.includes('An invalid token was provided')) {
                 console.error('💥 CRITICAL: BOT_TOKEN is invalid! Please check your BOT_TOKEN in environment variables.');
-                break;
+                botStatus.isOnline = false;
+                botStatus.discordError = 'INVALID_TOKEN';
+                return false;
             }
 
-            if (attempt < maxRetries) {
-                const delayMs = attempt * 5000;
-                console.log(`⏳ Retrying Discord connection in ${delayMs / 1000}s...`);
-                await new Promise(res => setTimeout(res, delayMs));
+            // Handle disallowed intents (Code 4014)
+            if (error.message.includes('disallowed intents') || error.message.includes('Used disallowed intents')) {
+                console.error('💥 CRITICAL DISCORD ERROR 4014: Used disallowed intents!');
+                console.error('👉 You MUST enable "MESSAGE CONTENT INTENT" & "SERVER MEMBERS INTENT" in Discord Developer Portal!');
+                console.error('   Visit: https://discord.com/developers/applications -> Bot -> Privileged Gateway Intents');
+                console.error('   Toggle ON: "Server Members Intent" (REQUIRED) & "Message Content Intent" (REQUIRED)');
+                console.error('   Then click "Save Changes".');
+                botStatus.isOnline = false;
+                botStatus.discordError = 'DISALLOWED_INTENTS';
+                console.log('⏳ Waiting 60s before re-checking intents...');
+                await new Promise(res => setTimeout(res, 60000));
+                continue;
             }
+
+            // Exponential backoff with jitter (capped at 60s for first few attempts, max 120s)
+            const baseDelay = attempt <= 3 ? attempt * 5000 : Math.min(60000, Math.pow(2, Math.min(attempt, 6)) * 1000);
+            const jitter = Math.floor(Math.random() * 2000);
+            const delayMs = baseDelay + jitter;
+
+            console.log(`⏳ Retrying Discord connection in ${(delayMs / 1000).toFixed(1)}s (Attempt ${attempt + 1})...`);
+            await new Promise(res => setTimeout(res, delayMs));
         }
     }
-
-    console.error('❌ All Discord login attempts failed. Exiting process so container can restart.');
-    process.exit(1);
 }
 
 connectToDiscord();

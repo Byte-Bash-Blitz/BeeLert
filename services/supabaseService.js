@@ -634,19 +634,72 @@ function isSupabaseConfigured() {
     return isConfigured;
 }
 
+let lastHealthCheck = {
+    connected: false,
+    latencyMs: 0,
+    lastChecked: null,
+    error: null
+};
+
 /**
- * Test database connection
+ * Test database connection with retry and exponential backoff
+ * @param {number} maxRetries - Max retry attempts
+ * @param {number} initialDelayMs - Initial delay in ms
  * @returns {Promise<boolean>} - Connection status
  */
-async function testConnection() {
-    if (!isConfigured) return false;
-    
-    try {
-        const { error } = await supabase.from('birthdays').select('count').limit(1);
-        return !error;
-    } catch {
+async function testConnection(maxRetries = 3, initialDelayMs = 1000) {
+    if (!isConfigured) {
+        lastHealthCheck = {
+            connected: false,
+            latencyMs: 0,
+            lastChecked: new Date().toISOString(),
+            error: 'Supabase URL or Key not configured in environment variables'
+        };
         return false;
     }
+
+    let delay = initialDelayMs;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        const start = Date.now();
+        try {
+            const { data, error } = await supabase.from('heartbeat_logs').select('id').limit(1);
+            if (error) throw error;
+            const latency = Date.now() - start;
+            lastHealthCheck = {
+                connected: true,
+                latencyMs: latency,
+                lastChecked: new Date().toISOString(),
+                error: null
+            };
+            return true;
+        } catch (err) {
+            const latency = Date.now() - start;
+            lastHealthCheck = {
+                connected: false,
+                latencyMs: latency,
+                lastChecked: new Date().toISOString(),
+                error: err.message
+            };
+            if (attempt < maxRetries) {
+                console.warn(`⚠️ [Database] Connection attempt ${attempt}/${maxRetries} failed: ${err.message}. Retrying in ${delay}ms...`);
+                await new Promise(r => setTimeout(r, delay));
+                delay *= 2;
+            } else {
+                console.error(`❌ [Database] Connection test failed after ${maxRetries} attempts: ${err.message}`);
+            }
+        }
+    }
+    return false;
+}
+
+/**
+ * Get cached or current database health status
+ */
+function getDatabaseHealth() {
+    return {
+        ...lastHealthCheck,
+        isConfigured
+    };
 }
 
 // ==================== HEARTBEAT/LOG OPERATIONS ====================
@@ -973,6 +1026,7 @@ module.exports = {
     supabase,
     isSupabaseConfigured,
     testConnection,
+    getDatabaseHealth,
     // Heartbeat
     writeHeartbeat,
     getHeartbeatLogs,
