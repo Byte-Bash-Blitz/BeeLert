@@ -161,8 +161,14 @@ let botStatus = {
     totalMessagesSent: 0
 };
 
-// Create Discord client with necessary intents
+// Discord REST API base (supports Cloudflare Worker proxy for Render / shared-host IP bans)
+const DISCORD_API_BASE = (process.env.DISCORD_API_PROXY || process.env.DISCORD_PROXY_URL || 'https://discord.com/api').trim().replace(/\/+$/, '');
+
+// Create Discord client with necessary intents and custom REST proxy support
 const client = new Client({
+    rest: {
+        api: DISCORD_API_BASE
+    },
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
@@ -1985,7 +1991,7 @@ async function promoteToPrimary() {
                 progCmds = require('./programming-challenge').getSlashCommands().map(c => c.toJSON());
             } catch(e) {}
             const allCommands = [...commands, ...progCmds];
-            const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+            const rest = new REST({ version: '10', api: DISCORD_API_BASE }).setToken(BOT_TOKEN);
             await rest.put(
                 Routes.applicationCommands(client.user.id),
                 { body: allCommands }
@@ -2032,7 +2038,7 @@ client.once(Events.ClientReady, async (c) => {
                 console.error('Error getting programming challenge commands:', e);
             }
             const allCommands = [...commands, ...progCmds];
-            const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+            const rest = new REST({ version: '10', api: DISCORD_API_BASE }).setToken(BOT_TOKEN);
             await rest.put(
                 Routes.applicationCommands(c.user.id),
                 { body: allCommands }
@@ -4410,6 +4416,7 @@ client.rest.on('invalidRequestWarning', (info) => {
 
 // Pre-flight diagnostic probe for Discord Gateway & Token
 const https = require('https');
+const http = require('http');
 
 async function runPreFlightDiagnostics(token) {
     const isPresent = Boolean(token && token.length > 0);
@@ -4423,6 +4430,10 @@ async function runPreFlightDiagnostics(token) {
         return { ok: false, fatal: true, reason: 'TOKEN_MISSING' };
     }
 
+    if (DISCORD_API_BASE !== 'https://discord.com/api') {
+        console.log(`[Discord:PreFlight] Using custom REST API endpoint: ${DISCORD_API_BASE}`);
+    }
+
     // 1. DNS Resolution Check for gateway.discord.gg
     try {
         const gwIps = await dns.promises.resolve4('gateway.discord.gg');
@@ -4434,7 +4445,16 @@ async function runPreFlightDiagnostics(token) {
     // 2. REST API /gateway/bot verification
     return new Promise((resolve) => {
         const startTime = Date.now();
-        const req = https.request('https://discord.com/api/v10/gateway/bot', {
+        let targetUrl;
+        try {
+            targetUrl = new URL(`${DISCORD_API_BASE}/v10/gateway/bot`);
+        } catch (urlErr) {
+            console.error(`💥 [Discord:PreFlight] Invalid DISCORD_API_BASE URL: ${DISCORD_API_BASE}`);
+            return resolve({ ok: false, fatal: true, reason: 'INVALID_API_URL' });
+        }
+
+        const httpModule = targetUrl.protocol === 'http:' ? http : https;
+        const req = httpModule.request(targetUrl, {
             method: 'GET',
             headers: {
                 'Authorization': `Bot ${token}`,
@@ -4471,11 +4491,18 @@ async function runPreFlightDiagnostics(token) {
                     return resolve({ ok: false, fatal: true, reason: 'TOKEN_INVALID_401' });
                 } else if (res.statusCode === 429) {
                     const retryAfter = res.headers['retry-after'] || (parsed && parsed.retry_after) || 5;
-                    console.warn(`⚠️ [Discord:PreFlight] Rate limited by Discord API (HTTP 429). Retry after ${retryAfter}s`);
-                    return resolve({ ok: false, reason: 'RATE_LIMITED_429', retryAfterSec: Number(retryAfter) });
+                    const retryAfterSec = Math.round(Number(retryAfter) || 5);
+                    const isCloudflareIpBan = retryAfterSec > 60;
+                    console.warn(`⚠️ [Discord:PreFlight] Rate limited by Discord API (HTTP 429). Retry after ${retryAfterSec}s`);
+                    return resolve({
+                        ok: false,
+                        reason: 'RATE_LIMITED_429',
+                        retryAfterSec,
+                        isCloudflareIpBan
+                    });
                 } else if (res.statusCode === 403) {
                     console.error(`💥 [Discord:PreFlight] Access Forbidden (HTTP 403). Cloudflare or Discord may be blocking requests from this IP.`);
-                    return resolve({ ok: false, reason: 'FORBIDDEN_403' });
+                    return resolve({ ok: false, reason: 'FORBIDDEN_403', isCloudflareIpBan: true });
                 } else {
                     console.warn(`⚠️ [Discord:PreFlight] Unexpected response HTTP ${res.statusCode}: ${body.slice(0, 200)}`);
                     return resolve({ ok: false, reason: `HTTP_${res.statusCode}` });
@@ -4501,12 +4528,18 @@ async function connectToDiscord() {
     console.log(`[Runtime] Node.js: ${process.version}, Platform: ${process.platform} (${process.arch})`);
     console.log('[Database] Connecting...');
     try {
-        const isDbConnected = await supabaseService.testConnection(3, 1000);
-        if (isDbConnected) {
-            console.log('[Database] Connected');
+        if (!supabaseService.isSupabaseConfigured()) {
+            console.warn('⚠️ [Database] Notice: SUPABASE_URL or SUPABASE_KEY is missing from environment variables.');
+            console.warn('👉 To enable database storage on Render, add SUPABASE_URL and SUPABASE_KEY to your Render Environment tab.');
+            console.warn('   Continuing with local JSON storage fallback.');
         } else {
-            const health = supabaseService.getDatabaseHealth();
-            console.warn(`⚠️ [Database] Connection warning: ${health.error || 'Connection failed'}. Continuing with local fallback.`);
+            const isDbConnected = await supabaseService.testConnection(3, 1000);
+            if (isDbConnected) {
+                console.log('[Database] Connected to Supabase');
+            } else {
+                const health = supabaseService.getDatabaseHealth();
+                console.warn(`⚠️ [Database] Connection warning: ${health.error || 'Connection failed'}. Continuing with local fallback.`);
+            }
         }
     } catch (dbErr) {
         console.warn('⚠️ [Database] Connection check error:', dbErr.message);
@@ -4523,6 +4556,9 @@ async function connectToDiscord() {
 
     console.log('[Discord] Logging in...');
     console.log(`[Discord] Token present: true, length: ${BOT_TOKEN.length}, prefix: ${BOT_TOKEN.substring(0, 4)}...`);
+    if (DISCORD_API_BASE !== 'https://discord.com/api') {
+        console.log(`[Discord] Custom API Proxy: ${DISCORD_API_BASE}`);
+    }
 
     let attempt = 0;
     while (true) {
@@ -4537,6 +4573,35 @@ async function connectToDiscord() {
             botStatus.isOnline = false;
             botStatus.discordError = preFlight.reason;
             return false;
+        }
+
+        // Handle Cloudflare shared-IP rate limit / IP ban on Render
+        if (preFlight.reason === 'RATE_LIMITED_429' && preFlight.isCloudflareIpBan) {
+            botStatus.isOnline = false;
+            botStatus.discordError = 'HOST_IP_RATE_LIMITED_429';
+            console.error('═══════════════════════════════════════════════════════════════════════════════');
+            console.error('💥 [Discord:429] RENDER SHARED HOST IP IS BLOCKED / RATE LIMITED BY DISCORD!');
+            console.error(`   Cloudflare IP ban retry penalty: ${preFlight.retryAfterSec}s (~${Math.round(preFlight.retryAfterSec / 60)} minutes).`);
+            console.error('👉 WHY THIS HAPPENS ON RENDER:');
+            console.error('   Render free tier shares outbound IPs across many projects. Other bots on');
+            console.error('   this shared IP triggered Cloudflare DDoS / rate limit thresholds.');
+            console.error('👉 IMMEDIATE FIXES TO GET THE BOT ONLINE (Choose 1):');
+            console.error('   1. INSTANT NEW IP (Takes 15 seconds):');
+            console.error('      In Render Dashboard -> Click "Manual Deploy" -> "Clear build cache & deploy"');
+            console.error('      (or Settings -> "Suspend Service", wait 10s, then "Resume Service").');
+            console.error('      This automatically migrates your bot to a fresh container with an unbanned IP!');
+            console.error('   2. SWITCH REGION:');
+            console.error('      In Render Dashboard -> Settings -> Change Region to Frankfurt (EU) or Ohio (US).');
+            console.error('   3. PERMANENT REVERSE PROXY (100% immune to IP bans):');
+            console.error('      Set up a free Cloudflare Worker (see cloudflare-worker/README.md) and set');
+            console.error('      DISCORD_API_PROXY=https://your-worker.workers.dev/api in Render Environment.');
+            console.error('═══════════════════════════════════════════════════════════════════════════════');
+
+            // Do not slam client.login() immediately when IP is hard-banned (it causes 90s login timeouts)
+            const waitTime = Math.min(60, preFlight.retryAfterSec || 60);
+            console.log(`⏳ Waiting ${waitTime}s before re-checking IP rate limit status...`);
+            await new Promise(r => setTimeout(r, waitTime * 1000));
+            continue;
         }
 
         if (preFlight.sessionLimit && preFlight.sessionLimit.remaining === 0) {
@@ -4595,6 +4660,12 @@ async function connectToDiscord() {
                 console.log('⏳ Waiting 60s before re-checking intents...');
                 await new Promise(res => setTimeout(res, 60000));
                 continue;
+            }
+
+            // Connection timeout or 429
+            if (error.message.includes('timed out') || error.message.includes('429')) {
+                console.warn('💡 Discord connection timed out or hit 429. If hosting on Render free tier, shared IP rate-limiting is likely.');
+                console.warn('   Quick fix: In Render dashboard, click "Manual Deploy" -> "Clear build cache & deploy" to obtain a fresh IP.');
             }
 
             // Exponential backoff with jitter (capped at 60s for first few attempts, max 120s)
