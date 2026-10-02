@@ -1,8 +1,8 @@
 // Supabase Database Service
 const { createClient } = require('@supabase/supabase-js');
 
-const rawUrl = process.env.SUPABASE_URL;
-const rawKey = process.env.SUPABASE_KEY;
+const rawUrl = process.env.SUPABASE_URL || process.env.SUPABASE_PROJECT_URL;
+const rawKey = process.env.SUPABASE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_API_KEY;
 
 const supabaseUrl = rawUrl ? rawUrl.trim().replace(/^["']|["']$/g, '').trim() : null;
 const supabaseKey = rawKey ? rawKey.trim().replace(/^["']|["']$/g, '').trim() : null;
