@@ -3,192 +3,450 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CYBER HUD // Gaming Progress Command Center</title>
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-    <!-- FontAwesome for icons -->
+    <title>BeeLert // Discord Bot SaaS Control Center</title>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- FontAwesome 6 Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Scanline & Cyber Grid Background -->
-    <div class="cyber-scanlines"></div>
-    <div class="cyber-grid-bg"></div>
+    <div class="app-shell">
+        <!-- Sidebar Backdrop for Mobile Drawer -->
+        <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="toggleMobileSidebar(false)"></div>
 
-    <div class="dashboard-container">
-        <!-- GAMING HUD HEADER -->
-        <header class="hud-header">
-            <div class="logo-area">
-                <span class="hud-sub"><i class="fa-solid fa-gamepad"></i> COMMAND CENTER v2.0</span>
-                <h1 class="hud-title">CYBER<span>PROGRESS</span></h1>
+        <!-- Collapsible SaaS Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="brand-header">
+                <a href="/dashboard/" class="brand-link">
+                    <div class="brand-icon-wrapper">
+                        <i class="fa-solid fa-bolt"></i>
+                    </div>
+                    <div class="brand-info">
+                        <span class="brand-name">BeeLert</span>
+                        <span class="brand-tag">PRO CONTROL</span>
+                    </div>
+                </a>
             </div>
-            
-            <div class="header-actions">
-                <a href="/programming-dashboard" class="hud-nav-btn"><i class="fa-solid fa-code"></i> CODE CHALLENGES</a>
-                <a href="/programming-dashboard" onclick="sessionStorage.setItem('openTab', 'admin')" class="hud-nav-btn" style="border-color: var(--neon-gold); color: var(--neon-gold);"><i class="fa-solid fa-user-shield"></i> ADMIN PANEL</a>
-                <div class="status-badge" id="bot-badge">
-                    <span class="pulse-dot"></span>
-                    <span id="bot-status-text">BOT OFFLINE</span>
+
+            <!-- Navigation Links -->
+            <nav class="sidebar-nav">
+                <div class="nav-group">
+                    <div class="nav-group-title">Core Management</div>
+                    <a href="#overview" class="nav-item active">
+                        <i class="fa-solid fa-chart-pie"></i>
+                        <span class="nav-item-text">Overview</span>
+                    </a>
+                    <a href="#server-nodes" class="nav-item">
+                        <i class="fa-solid fa-server"></i>
+                        <span class="nav-item-text">Server Nodes</span>
+                    </a>
+                    <a href="#squad-members" class="nav-item">
+                        <i class="fa-solid fa-users"></i>
+                        <span class="nav-item-text">Squad Members</span>
+                    </a>
                 </div>
-                <div class="status-badge" id="db-badge">
-                    <span class="pulse-dot"></span>
-                    <span id="db-status-text">DATABASE OFFLINE</span>
+
+                <div class="nav-group">
+                    <div class="nav-group-title">Operations</div>
+                    <a href="#command-console" class="nav-item">
+                        <i class="fa-solid fa-terminal"></i>
+                        <span class="nav-item-text">Command Console</span>
+                    </a>
+                    <a href="#database-logs" onclick="switchLogTab('voice')" class="nav-item">
+                        <i class="fa-solid fa-microphone-lines"></i>
+                        <span class="nav-item-text">4-Clan Voice Activity</span>
+                    </a>
+                    <a href="#database-logs" class="nav-item">
+                        <i class="fa-solid fa-database"></i>
+                        <span class="nav-item-text">Database Logs</span>
+                    </a>
                 </div>
+
+                <div class="nav-group">
+                    <div class="nav-group-title">Extensions</div>
+                    <a href="/programming-dashboard" class="nav-item">
+                        <i class="fa-solid fa-code"></i>
+                        <span class="nav-item-text">Code Challenges</span>
+                        <span class="nav-item-badge">APP</span>
+                    </a>
+                    <a href="/programming-dashboard" onclick="sessionStorage.setItem('openTab', 'admin')" class="nav-item">
+                        <i class="fa-solid fa-shield-halved"></i>
+                        <span class="nav-item-text">Admin Panel</span>
+                    </a>
+                </div>
+
+                <div class="nav-group">
+                    <div class="nav-group-title">System & Legal</div>
+                    <a href="/health" target="_blank" class="nav-item">
+                        <i class="fa-solid fa-heart-pulse"></i>
+                        <span class="nav-item-text">System Health</span>
+                    </a>
+                    <a href="/terms" target="_blank" class="nav-item">
+                        <i class="fa-solid fa-file-contract"></i>
+                        <span class="nav-item-text">Terms of Service</span>
+                    </a>
+                    <a href="/privacy" target="_blank" class="nav-item">
+                        <i class="fa-solid fa-shield-cat"></i>
+                        <span class="nav-item-text">Privacy Policy</span>
+                    </a>
+                </div>
+            </nav>
+
+            <!-- Sidebar Footer & Bot Mini-Profile -->
+            <div class="sidebar-footer">
+                <div class="sidebar-profile">
+                    <div class="sidebar-avatar-wrapper">
+                        <div class="sidebar-avatar">
+                            <i class="fa-solid fa-robot"></i>
+                        </div>
+                        <span class="sidebar-status-dot"></span>
+                    </div>
+                    <div class="sidebar-profile-info">
+                        <span class="sidebar-profile-name">BeeLert Assistant</span>
+                        <span class="sidebar-profile-status"><i class="fa-solid fa-circle" style="font-size: 6px;"></i> Active & Synced</span>
+                    </div>
+                </div>
+                <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" onclick="toggleDesktopSidebar()" title="Toggle Sidebar">
+                    <i class="fa-solid fa-chevron-left" id="sidebar-toggle-icon"></i>
+                    <span class="toggle-text">Collapse Menu</span>
+                </button>
             </div>
-        </header>
+        </aside>
 
-        <!-- Main Dashboard Layout -->
-        <main class="dashboard-grid">
-            
-            <!-- Left Side: Config & Stats -->
-            <section class="panel hud-card config-panel animate-slide-in">
-                <div class="hud-corner top-left"></div>
-                <div class="hud-corner top-right"></div>
-                <h2 class="panel-title"><i class="fa-solid fa-sliders neon-cyan-text"></i> SERVER NODE CONFIG</h2>
-                
-                <div class="pair-selector-wrapper">
-                    <label for="pair-select"><i class="fa-solid fa-network-wired"></i> SELECT SERVER PAIR:</label>
-                    <select id="pair-select" class="gamer-select">
-                        <option value="">Loading server pairs...</option>
-                    </select>
-                </div>
-                
-                <div id="pair-config-details" class="config-details">
-                    <div class="config-item">
-                        <span class="label">Community Server</span>
-                        <span class="value" id="cfg-comm-server">-</span>
-                    </div>
-                    <div class="config-item">
-                        <span class="label">Progress Channel</span>
-                        <span class="value" id="cfg-comm-channel">-</span>
-                    </div>
-                    <div class="config-item">
-                        <span class="label">Clan Server</span>
-                        <span class="value" id="cfg-clan-server">-</span>
-                    </div>
-                    <div class="config-item">
-                        <span class="label">Reminder Channel</span>
-                        <span class="value" id="cfg-clan-channel">-</span>
+        <!-- Main Content Area -->
+        <div class="main-content-wrapper">
+            <!-- Top Sticky Navigation Bar -->
+            <header class="top-navbar">
+                <div class="top-navbar-left">
+                    <button class="mobile-menu-btn" onclick="toggleMobileSidebar(true)" aria-label="Open Navigation">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <div class="page-title-area">
+                        <div class="breadcrumbs">
+                            <i class="fa-solid fa-house"></i>
+                            <span>BeeLert</span>
+                            <i class="fa-solid fa-chevron-right"></i>
+                            <span>Control Panel</span>
+                        </div>
+                        <h1 class="page-heading">Dashboard Overview</h1>
                     </div>
                 </div>
 
-                <!-- Bot general info section -->
-                <div class="config-details" style="margin-bottom: 24px;">
-                    <div class="stat-label"><i class="fa-solid fa-microchip"></i> SYSTEM HUD</div>
-                    <div class="config-item" style="border-left-color: var(--neon-cyan);">
-                        <span class="label">Bot Uptime</span>
-                        <span class="value" id="bot-uptime">-</span>
+                <div class="top-navbar-right">
+                    <!-- Server Pair Selector Dropdown -->
+                    <div class="pair-selector-box" title="Select configured Discord server pair">
+                        <i class="fa-solid fa-network-wired"></i>
+                        <select id="pair-select" class="pair-select-input" aria-label="Select Discord Server Pair">
+                            <option value="">Loading server pairs...</option>
+                        </select>
                     </div>
-                    <div class="config-item" style="border-left-color: var(--neon-cyan);">
-                        <span class="label">Messages Sent</span>
-                        <span class="value" id="bot-msg-count">-</span>
-                    </div>
-                </div>
 
-                <!-- Gaming Energy progress bar -->
-                <div class="liquid-stats">
-                    <div class="stat-box">
-                        <div class="stat-label"><i class="fa-solid fa-crosshair"></i> QUEST COMPLETION</div>
-                        <div class="progress-liquid-container">
-                            <div class="liquid-fill" id="posted-liquid" style="width: 0%"></div>
-                            <span class="progress-text" id="posted-stat-text">0 / 0</span>
+                    <!-- System Status Badges -->
+                    <div class="status-pill-group">
+                        <div class="status-badge" id="bot-badge" title="Discord Gateway Status">
+                            <span class="pulse-dot"></span>
+                            <span id="bot-status-text">BOT OFFLINE</span>
+                        </div>
+                        <div class="status-badge" id="db-badge" title="Supabase Database Status">
+                            <span class="pulse-dot"></span>
+                            <span id="db-status-text">DATABASE OFFLINE</span>
                         </div>
                     </div>
-                </div>
-            </section>
 
-            <!-- Middle: Trigger Console -->
-            <section class="panel hud-card trigger-panel animate-slide-in-delay-1">
-                <div class="hud-corner top-left"></div>
-                <div class="hud-corner top-right"></div>
-                <h2 class="panel-title"><i class="fa-solid fa-terminal neon-green-text"></i> COMMAND CONSOLE</h2>
-                <p class="panel-desc">Execute manual dispatch alerts to clan channels or private DMs.</p>
-                
-                <div class="trigger-buttons-grid">
-                    <button class="gamer-btn btn-green" onclick="triggerReminder('first')">
-                        <i class="fa-solid fa-bullhorn"></i>
-                        <span class="btn-text">
-                            <strong>9:00 PM ALERT</strong>
-                            <small>Clan Channel Notification</small>
-                        </span>
+                    <!-- Action Buttons -->
+                    <button class="nav-action-btn" onclick="refreshDashboard()" title="Sync live status and logs">
+                        <i class="fa-solid fa-arrows-rotate" id="refresh-icon"></i>
+                        <span>Sync</span>
                     </button>
-                    
-                    <button class="gamer-btn btn-cyan" onclick="triggerReminder('second')">
-                        <i class="fa-solid fa-paper-plane"></i>
-                        <span class="btn-text">
-                            <strong>11:00 PM DMs</strong>
-                            <small>Direct Member Alerts</small>
-                        </span>
-                    </button>
-                    
-                    <button class="gamer-btn btn-red" onclick="triggerReminder('inactive')">
-                        <i class="fa-solid fa-triangle-exclamation"></i>
-                        <span class="btn-text">
-                            <strong>10:00 AM ALERT</strong>
-                            <small>Inactive Member Scan</small>
-                        </span>
-                    </button>
+                    <a href="/programming-dashboard" class="nav-action-btn btn-accent">
+                        <i class="fa-solid fa-code"></i>
+                        <span>Challenges</span>
+                    </a>
                 </div>
-                
-                <div class="time-capsules">
-                    <div class="capsule">9 PM Alert: <span id="time-first">--:--</span></div>
-                    <div class="capsule">11 PM DMs: <span id="time-second">--:--</span></div>
-                    <div class="capsule">10 AM Inactive: <span id="time-inactive">--:--</span></div>
-                </div>
-            </section>
+            </header>
 
-            <!-- Right Side: Tracked Members -->
-            <section class="panel hud-card members-panel span-cols animate-slide-in-delay-2">
-                <div class="hud-corner top-left"></div>
-                <div class="hud-corner top-right"></div>
-                <h2 class="panel-title"><i class="fa-solid fa-users-gear neon-gold-text"></i> SQUAD MEMBER STATUS</h2>
-                <div class="members-filter-bar">
-                    <button class="filter-btn active" onclick="filterMembers('all')">ALL SQUAD</button>
-                    <button class="filter-btn" onclick="filterMembers('posted')">SUBMITTED</button>
-                    <button class="filter-btn" onclick="filterMembers('unposted')">MISSING</button>
-                    <button class="filter-btn" onclick="filterMembers('inactive')">AFK (2D+)</button>
-                </div>
-                <div class="members-list-grid" id="members-list">
-                    <div class="no-members">Select a server pair to view squad members.</div>
-                </div>
-            </section>
+            <!-- Dashboard Content Canvas -->
+            <main class="dashboard-main-content" id="overview">
+                <!-- Welcome Banner -->
+                <section class="welcome-banner">
+                    <div class="welcome-text">
+                        <h1>Welcome back, Operator</h1>
+                        <p>Here's what's happening with your BeeLert Discord community and clan network today.</p>
+                    </div>
+                    <div class="welcome-meta">
+                        <div class="meta-pill">
+                            <i class="fa-solid fa-shield-check" style="color: var(--color-success);"></i>
+                            <span>All Systems Nominal</span>
+                        </div>
+                        <div class="meta-pill">
+                            <i class="fa-regular fa-clock" style="color: var(--accent-blurple);"></i>
+                            <span id="current-live-time">Live Sync</span>
+                        </div>
+                    </div>
+                </section>
 
-            <!-- Bottom: Database Logs -->
-            <section class="panel hud-card database-panel span-cols-full animate-slide-in-delay-3">
-                <div class="hud-corner top-left"></div>
-                <div class="hud-corner top-right"></div>
-                <h2 class="panel-title"><i class="fa-solid fa-database neon-cyan-text"></i> SYSTEM LOGS & MATCH HISTORY</h2>
-                <div class="logs-tabs-header">
-                    <button class="log-tab-btn active" onclick="switchLogTab('updates')">PROGRESS LOGS</button>
-                    <button class="log-tab-btn" onclick="switchLogTab('reminders')">REMINDER DISPATCH LOGS</button>
-                </div>
-                <div class="log-table-container">
-                    <table class="gamer-table" id="db-logs-table">
-                        <thead>
-                            <tr id="table-headers">
-                                <th>Loading logs...</th>
-                            </tr>
-                        </thead>
-                        <tbody id="table-body">
-                            <tr>
-                                <td colspan="5" class="center-text">No records loaded.</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
+                <!-- Top Metrics / Stat Cards Grid -->
+                <section class="stat-cards-grid">
+                    <!-- Stat 1: Bot Health & Uptime -->
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <span class="stat-card-label">Bot Health & Gateway</span>
+                            <div class="stat-card-icon icon-green">
+                                <i class="fa-solid fa-heart-pulse"></i>
+                            </div>
+                        </div>
+                        <div class="stat-card-value" id="bot-uptime">-</div>
+                        <div class="stat-card-sub">
+                            <i class="fa-solid fa-circle-check" style="color: var(--color-success);"></i>
+                            <span>Continuous Gateway Uptime</span>
+                        </div>
+                    </div>
 
-            <footer style="margin-top: 3rem; padding: 2rem 0 1rem; border-top: 1px solid var(--border-color, #2d3748); text-align: center; font-size: 0.85rem; color: #a0aec0;">
-                <div style="display: flex; justify-content: center; gap: 1.5rem; margin-bottom: 0.5rem; flex-wrap: wrap;">
-                    <a href="/terms" target="_blank" style="color: #63b3ed; text-decoration: none; font-weight: 500;">Terms of Service</a>
+                    <!-- Stat 2: Dispatched Messages -->
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <span class="stat-card-label">Dispatched Alerts</span>
+                            <div class="stat-card-icon icon-blue">
+                                <i class="fa-solid fa-paper-plane"></i>
+                            </div>
+                        </div>
+                        <div class="stat-card-value" id="bot-msg-count">-</div>
+                        <div class="stat-card-sub">
+                            <i class="fa-solid fa-bell" style="color: var(--color-info);"></i>
+                            <span>Total Notifications Processed</span>
+                        </div>
+                    </div>
+
+                    <!-- Stat 3: Daily Quest Completion -->
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <span class="stat-card-label">Quest Completion</span>
+                            <div class="stat-card-icon icon-purple">
+                                <i class="fa-solid fa-bullseye"></i>
+                            </div>
+                        </div>
+                        <div class="stat-card-value" id="posted-stat-text">0 / 0 (0%)</div>
+                        <div class="stat-progress-bar-container">
+                            <div class="stat-progress-fill" id="posted-liquid" style="width: 0%"></div>
+                        </div>
+                        <div class="stat-card-sub">
+                            <i class="fa-solid fa-chart-simple" style="color: var(--accent-blurple);"></i>
+                            <span>Daily progress updates check-in</span>
+                        </div>
+                    </div>
+
+                    <!-- Stat 4: Scheduled Alert Windows -->
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <span class="stat-card-label">Scheduled Windows</span>
+                            <div class="stat-card-icon icon-yellow">
+                                <i class="fa-solid fa-calendar-check"></i>
+                            </div>
+                        </div>
+                        <div class="stat-card-value" style="font-size: 1.15rem; font-family: var(--font-mono); margin-top: 4px;">
+                            9 PM: <span id="time-first" style="color: var(--color-success);">--:--</span> • 11 PM: <span id="time-second" style="color: var(--color-info);">--:--</span>
+                        </div>
+                        <div class="stat-card-sub" style="margin-top: 10px;">
+                            <i class="fa-solid fa-triangle-exclamation" style="color: var(--color-warning);"></i>
+                            <span>Inactive Scan: <strong id="time-inactive" style="color: var(--text-primary); font-family: var(--font-mono);">--:--</strong></span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Core Operations Grid: Server Node Config & Command Console -->
+                <section class="operations-grid">
+                    <!-- Left: Server Node Configuration -->
+                    <div class="saas-card" id="server-nodes">
+                        <div class="saas-card-header">
+                            <div class="card-title-group">
+                                <div class="card-title-icon">
+                                    <i class="fa-solid fa-sliders"></i>
+                                </div>
+                                <div>
+                                    <h2 class="card-title">Server Node Configuration</h2>
+                                    <p class="card-subtitle">Active Discord guild channels and monitoring endpoints</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="saas-card-body">
+                            <div class="config-items-grid">
+                                <div class="config-item">
+                                    <span class="label">Community Server</span>
+                                    <div class="value-box">
+                                        <span class="value" id="cfg-comm-server">-</span>
+                                        <button class="copy-btn" onclick="copyText('cfg-comm-server')" title="Copy ID"><i class="fa-regular fa-copy"></i></button>
+                                    </div>
+                                </div>
+                                <div class="config-item">
+                                    <span class="label">Progress Channel</span>
+                                    <div class="value-box">
+                                        <span class="value" id="cfg-comm-channel">-</span>
+                                        <button class="copy-btn" onclick="copyText('cfg-comm-channel')" title="Copy ID"><i class="fa-regular fa-copy"></i></button>
+                                    </div>
+                                </div>
+                                <div class="config-item">
+                                    <span class="label">Clan Server</span>
+                                    <div class="value-box">
+                                        <span class="value" id="cfg-clan-server">-</span>
+                                        <button class="copy-btn" onclick="copyText('cfg-clan-server')" title="Copy ID"><i class="fa-regular fa-copy"></i></button>
+                                    </div>
+                                </div>
+                                <div class="config-item">
+                                    <span class="label">Reminder Channel</span>
+                                    <div class="value-box">
+                                        <span class="value" id="cfg-clan-channel">-</span>
+                                        <button class="copy-btn" onclick="copyText('cfg-clan-channel')" title="Copy ID"><i class="fa-regular fa-copy"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Command Console -->
+                    <div class="saas-card" id="command-console">
+                        <div class="saas-card-header">
+                            <div class="card-title-group">
+                                <div class="card-title-icon">
+                                    <i class="fa-solid fa-terminal"></i>
+                                </div>
+                                <div>
+                                    <h2 class="card-title">Command Console</h2>
+                                    <p class="card-subtitle">Execute instant manual alerts to clan channels or direct DMs</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="saas-card-body">
+                            <div class="trigger-buttons-group">
+                                <button class="action-trigger-btn btn-green btn-first" onclick="triggerReminder('first')">
+                                    <div class="btn-left">
+                                        <div class="btn-icon-wrapper btn-icon-green">
+                                            <i class="fa-solid fa-bullhorn"></i>
+                                        </div>
+                                        <div class="btn-content">
+                                            <span class="btn-title">9:00 PM Channel Alert</span>
+                                            <span class="btn-desc">Dispatch clan progress reminder notification</span>
+                                        </div>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right btn-chevron"></i>
+                                </button>
+
+                                <button class="action-trigger-btn btn-cyan btn-second" onclick="triggerReminder('second')">
+                                    <div class="btn-left">
+                                        <div class="btn-icon-wrapper btn-icon-cyan">
+                                            <i class="fa-solid fa-paper-plane"></i>
+                                        </div>
+                                        <div class="btn-content">
+                                            <span class="btn-title">11:00 PM Direct DMs</span>
+                                            <span class="btn-desc">Send targeted private DM alerts to pending squad members</span>
+                                        </div>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right btn-chevron"></i>
+                                </button>
+
+                                <button class="action-trigger-btn btn-red btn-inactive" onclick="triggerReminder('inactive')">
+                                    <div class="btn-left">
+                                        <div class="btn-icon-wrapper btn-icon-red">
+                                            <i class="fa-solid fa-triangle-exclamation"></i>
+                                        </div>
+                                        <div class="btn-content">
+                                            <span class="btn-title">10:00 AM Inactivity Alert</span>
+                                            <span class="btn-desc">Scan and report members inactive for 2+ consecutive days</span>
+                                        </div>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right btn-chevron"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Squad Member Status Section -->
+                <section class="members-section-card" id="squad-members">
+                    <div class="members-header">
+                        <div class="card-title-group">
+                            <div class="card-title-icon">
+                                <i class="fa-solid fa-users-gear"></i>
+                            </div>
+                            <div>
+                                <h2 class="card-title">Squad Member Status</h2>
+                                <p class="card-subtitle">Real-time daily progress check-ins and reminder dispatch logs</p>
+                            </div>
+                        </div>
+                        <div class="members-filter-bar">
+                            <button class="filter-btn active" onclick="filterMembers('all')">ALL SQUAD</button>
+                            <button class="filter-btn" onclick="filterMembers('posted')">SUBMITTED</button>
+                            <button class="filter-btn" onclick="filterMembers('unposted')">MISSING</button>
+                            <button class="filter-btn" onclick="filterMembers('inactive')">AFK (2D+)</button>
+                        </div>
+                    </div>
+                    <div class="members-list-grid" id="members-list">
+                        <div class="no-members">Select a server pair to view squad members.</div>
+                    </div>
+                </section>
+
+                <!-- Database Logs & Match History Section -->
+                <section class="database-section-card" id="database-logs">
+                    <div class="logs-header">
+                        <div class="card-title-group">
+                            <div class="card-title-icon">
+                                <i class="fa-solid fa-database"></i>
+                            </div>
+                            <div>
+                                <h2 class="card-title">System Logs & Match History</h2>
+                                <p class="card-subtitle">Live activity database logs powered by Supabase PostgreSQL</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="logs-tabs-header">
+                        <button class="log-tab-btn active" onclick="switchLogTab('voice')">
+                            <i class="fa-solid fa-microphone-lines"></i> 4-CLAN VOICE LOGS
+                        </button>
+                        <button class="log-tab-btn" onclick="switchLogTab('updates')">
+                            <i class="fa-solid fa-chart-line"></i> PROGRESS LOGS
+                        </button>
+                        <button class="log-tab-btn" onclick="switchLogTab('reminders')">
+                            <i class="fa-solid fa-bell"></i> REMINDER LOGS
+                        </button>
+                        <button class="log-tab-btn" onclick="switchLogTab('voice-reports')">
+                            <i class="fa-solid fa-file-waveform"></i> 11 PM REPORTS
+                        </button>
+                    </div>
+                    <div class="log-table-container">
+                        <table class="gamer-table saas-table" id="db-logs-table">
+                            <thead>
+                                <tr id="table-headers">
+                                    <th>Loading logs...</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-body">
+                                <tr>
+                                    <td colspan="7" class="center-text">No records loaded.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </main>
+
+            <!-- SaaS Footer -->
+            <footer class="app-footer">
+                <div class="footer-links">
+                    <a href="/terms" target="_blank" class="footer-link">Terms of Service</a>
                     <span>•</span>
-                    <a href="/privacy" target="_blank" style="color: #63b3ed; text-decoration: none; font-weight: 500;">Privacy Policy</a>
+                    <a href="/privacy" target="_blank" class="footer-link">Privacy Policy</a>
                     <span>•</span>
-                    <a href="/health" target="_blank" style="color: #63b3ed; text-decoration: none; font-weight: 500;">System Health</a>
+                    <a href="/health" target="_blank" class="footer-link">System Health</a>
+                    <span>•</span>
+                    <a href="/programming-dashboard" class="footer-link">Challenges</a>
                 </div>
-                <p>&copy; 2026 BeeLert by Byte-Bash-Blitz. All rights reserved.</p>
+                <div class="footer-copy">
+                    &copy; 2026 BeeLert by Byte-Bash-Blitz. All rights reserved.
+                </div>
             </footer>
-        </main>
+        </div>
     </div>
 
     <!-- Notification Toast -->

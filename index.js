@@ -1032,7 +1032,9 @@ const path = require('path');
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/terms', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public/terms.html'));
+    res.sendFile(path.resolve(__dirname, 'public/terms.html'), (err) => {
+        if (err && !res.headersSent) res.status(500).send('Terms of Service page error');
+    });
 });
 
 app.get('/terms-of-service', (req, res) => {
@@ -1040,7 +1042,9 @@ app.get('/terms-of-service', (req, res) => {
 });
 
 app.get('/privacy', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public/privacy.html'));
+    res.sendFile(path.resolve(__dirname, 'public/privacy.html'), (err) => {
+        if (err && !res.headersSent) res.status(500).send('Privacy Policy page error');
+    });
 });
 
 app.get('/privacy-policy', (req, res) => {

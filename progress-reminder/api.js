@@ -109,12 +109,23 @@ function registerRoutes(app, client, botStatus) {
 
     // 2. GET DATABASE LOGS: Query recent logs and updates from Supabase
     router.get('/database-logs', async (req, res) => {
+        const fs = require('fs');
+        const path = require('path');
+
         if (!state.isDbConfigured()) {
+            let localSessions = [];
+            try {
+                const lp = path.join(__dirname, '../voice-monitor-sessions.json');
+                if (fs.existsSync(lp)) localSessions = JSON.parse(fs.readFileSync(lp, 'utf8') || '[]');
+            } catch (e) {}
+
             return res.json({
                 success: true,
                 dbConfigured: false,
                 reminderLogs: [],
-                progressUpdates: []
+                progressUpdates: [],
+                voiceSessions: localSessions,
+                voiceReports: []
             });
         }
 
@@ -133,15 +144,78 @@ function registerRoutes(app, client, botStatus) {
                 .order('created_at', { ascending: false })
                 .limit(15);
 
+            // C. Fetch recent 4-clan voice sessions from Supabase (limit 50)
+            let voiceSessions = [];
+            try {
+                const { data: vsData, error: vsError } = await supabase
+                    .from('daily_voice_monitor_sessions')
+                    .select('*')
+                    .order('join_time', { ascending: false })
+                    .limit(50);
+                if (!vsError && vsData && vsData.length > 0) {
+                    voiceSessions = vsData;
+                }
+            } catch (vsErr) {
+                console.warn('⚠️ [Progress Reminder API] Failed fetching voice sessions from Supabase:', vsErr.message);
+            }
+
+            // Fallback to local sessions if Supabase table is empty
+            if (voiceSessions.length === 0) {
+                try {
+                    const lp = path.join(__dirname, '../voice-monitor-sessions.json');
+                    if (fs.existsSync(lp)) voiceSessions = JSON.parse(fs.readFileSync(lp, 'utf8') || '[]');
+                } catch (e) {}
+            }
+
+            // D. Fetch recent 11 PM voice report logs (limit 15)
+            let voiceReports = [];
+            try {
+                const { data: vrData, error: vrError } = await supabase
+                    .from('daily_voice_report_logs')
+                    .select('*')
+                    .order('sent_at', { ascending: false })
+                    .limit(15);
+                if (!vrError && vrData && vrData.length > 0) {
+                    voiceReports = vrData;
+                }
+            } catch (vrErr) {}
+
+            if (voiceReports.length === 0) {
+                try {
+                    const rp = path.join(__dirname, '../voice-monitor-reports.json');
+                    if (fs.existsSync(rp)) voiceReports = JSON.parse(fs.readFileSync(rp, 'utf8') || '[]');
+                } catch (e) {}
+            }
+
+            // Exclude test/mock artifacts from live dashboard
+            const cleanVoiceSessions = (voiceSessions || []).filter(s => {
+                const uid = String(s.discord_user_id || s.discordUserId || '').toLowerCase();
+                const uname = String(s.username || s.displayName || s.display_name || '').toLowerCase();
+                const sDate = String(s.session_date || s.sessionDate || '');
+                return !uid.includes('test') && !uid.includes('hero') && !uname.includes('test') && !uname.includes('hero') && sDate !== '2099-05-15';
+            });
+
+            const cleanVoiceReports = (voiceReports || []).filter(r => {
+                const rDate = String(r.report_date || r.reportDate || '');
+                return rDate !== '2099-05-15';
+            });
+
+            const cleanReminderLogs = (reminderLogs || []).filter(l => {
+                const uid = String(l.discord_user_id || '').toLowerCase();
+                return !uid.includes('test') && !uid.includes('hero') && l.reminder_date !== '2099-05-15';
+            });
+
             res.json({
                 success: true,
                 dbConfigured: !logError && !updateError,
-                reminderLogs: reminderLogs || [],
-                progressUpdates: progressUpdates || []
+                reminderLogs: cleanReminderLogs,
+                progressUpdates: progressUpdates || [],
+                voiceSessions: cleanVoiceSessions,
+                voiceReports: voiceReports || []
             });
         } catch (error) {
             console.warn('⚠️ [Progress Reminder API] DB logs fallback:', error.message);
-            res.json({ success: true, dbConfigured: false, reminderLogs: [], progressUpdates: [] });
+            res.json({ success: true, dbConfigured: false, reminderLogs: [], progressUpdates: [], voiceSessions: [], voiceReports: [] });
         }
     });
 

@@ -3,9 +3,13 @@ const db = require('./db');
 const tracker = require('./tracker');
 const scheduler = require('./scheduler');
 
-function init(client) {
+async function init(client) {
     console.log('🎙️ [Voice Monitor Plugin] Initializing Voice Activity Monitoring System...');
     try {
+        // Load database configuration from Supabase if table exists
+        const { supabase } = require('../services/supabaseService');
+        await config.loadDatabaseConfig(supabase);
+
         // Startup active sessions recovery
         tracker.initStartupRecovery(client);
 

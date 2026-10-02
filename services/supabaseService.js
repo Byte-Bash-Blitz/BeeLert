@@ -1,16 +1,26 @@
 // Supabase Database Service
 const { createClient } = require('@supabase/supabase-js');
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_KEY;
+const rawUrl = process.env.SUPABASE_URL;
+const rawKey = process.env.SUPABASE_KEY;
+
+const supabaseUrl = rawUrl ? rawUrl.trim().replace(/^["']|["']$/g, '').trim() : null;
+const supabaseKey = rawKey ? rawKey.trim().replace(/^["']|["']$/g, '').trim() : null;
 
 let supabase = null;
 let isConfigured = false;
 
 if (supabaseUrl && supabaseKey) {
-    supabase = createClient(supabaseUrl, supabaseKey);
-    isConfigured = true;
-    console.log('✅ Supabase database service initialized');
+    try {
+        supabase = createClient(supabaseUrl, supabaseKey);
+        isConfigured = true;
+        console.log('✅ Supabase database service initialized');
+    } catch (initErr) {
+        supabase = null;
+        isConfigured = false;
+        console.error('⚠️  Failed to initialize Supabase client:', initErr.message);
+        console.warn('⚠️  Continuing with local data fallback (Express server will remain active).');
+    }
 } else {
     console.log('⚠️  Warning: Supabase not configured. Using local data.');
 }
